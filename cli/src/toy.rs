@@ -47,28 +47,30 @@ impl Toy {
         let mut report: Vec<ReportRecord> = Default::default();
         for conid in positions_by_conid.keys() {
             if let Some(position) = positions_by_conid.get(conid) {
-                let from_date;
-                let from_price;
-                let change;
-                if let Some(historical_data) = self.historical_price(*conid).await? {
-                    from_date = Some(historical_data.t);
-                    from_price = Some(historical_data.c);
-                    change = if historical_data.c == 0.0 {
-                        None
-                    } else {
-                        Some((position.mktPrice - historical_data.c) / historical_data.c)
-                    };
-                } else {
-                    from_date = None;
-                    from_price = None;
-                    change = None;
+                let mut from_date = None;
+                let mut from_price = None;
+                let mut to_date = None;
+                let mut to_price = None;
+                let mut change = None;
+                let mut cursor = self.historical_price(*conid).await?.into_iter();
+                if let Some(earlist_data) = cursor.next() {
+                    from_date = Some(earlist_data.t);
+                    from_price = Some(earlist_data.c);
+                    if let Some(latest_data) = cursor.last() {
+                        to_date = Some(latest_data.t);
+                        to_price = Some(latest_data.c);
+                        if earlist_data.c != 0.0 {
+                            change = Some((latest_data.c - earlist_data.c) / earlist_data.c);
+                        }
+                    }
                 }
 
                 let record = ReportRecord {
                     ticker: position.ticker.clone(),
                     from_date,
                     from_price,
-                    to_price: position.mktPrice,
+                    to_date,
+                    to_price,
                     change,
                 };
                 report.push(record);
@@ -131,7 +133,7 @@ impl Toy {
         (position.conid, position)
     }
 
-    async fn historical_price(&self, conid: u64) -> anyhow::Result<Option<HistoricalDataRecord>> {
+    async fn historical_price(&self, conid: u64) -> anyhow::Result<Vec<HistoricalDataRecord>> {
         let response = self
             .client
             .get(format!(
@@ -151,8 +153,7 @@ impl Toy {
             .into_iter()
             .sorted_by_key(|record| record.t)
             .collect_vec();
-        let earliest_data = sorted_data.into_iter().next();
-        Ok(earliest_data)
+        Ok(sorted_data)
     }
 }
 
@@ -179,7 +180,6 @@ impl Default for Toy {
 #[derive(Deserialize)]
 struct PortfolioPosition {
     conid: u64,
-    mktPrice: f64,
     ticker: String,
 }
 
@@ -210,6 +210,10 @@ struct ReportRecord {
     from_date: Option<DateTime<Utc>>,
 
     from_price: Option<f64>,
-    to_price: f64,
+
+    #[serde(with = "crate::serde::option_time")]
+    to_date: Option<DateTime<Utc>>,
+
+    to_price: Option<f64>,
     change: Option<f64>,
 }
