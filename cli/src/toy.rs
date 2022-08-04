@@ -1,12 +1,16 @@
-use chrono::DateTime;
-use chrono::Utc;
+use crate::cli::Cli;
+use crate::cli::Format;
+use chrono::prelude::*;
+use clap::Parser;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 use reqwest::Client;
 use reqwest::ClientBuilder;
 use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
+use tokio::io::AsyncWriteExt;
 
 const DEFAULT_GATEWAY: &str = "https://localhost:5000/v1/api/";
 
@@ -14,6 +18,7 @@ pub struct Toy {
     client: Client,
     header: HeaderMap,
     account_id: String,
+    cli: Cli,
 }
 
 impl Toy {
@@ -29,46 +34,53 @@ impl Toy {
             .await?;
         if let Some(first_account) = accounts.first() {
             self.account_id = first_account.accountId.clone();
-            println!("Account ID: {}", &self.account_id);
+            log::info!("Account ID: {}", &self.account_id);
         } else {
-            println!("No account found");
+            log::info!("No account found");
             return Ok(());
         }
 
         let positions_by_conid = self.portfolio().await?;
-        println!("Found {} stocks", positions_by_conid.len());
-
-        // Calculate changes
-        let mut changes_by_conid: HashMap<u64, f64> = Default::default();
-        for conid in positions_by_conid.keys() {
-            if let Some(historical_price) = self.historical_price(*conid).await? {
-                if historical_price != 0.0 {
-                    // To avoid division by 0
-                    if let Some(position) = positions_by_conid.get(conid) {
-                        let change = (position.mktPrice - historical_price) / historical_price;
-                        changes_by_conid.insert(*conid, change);
-                    }
-                }
-            }
-        }
+        log::info!("Found {} stocks", positions_by_conid.len());
 
         // Finalize report
         let mut report: Vec<ReportRecord> = Default::default();
         for conid in positions_by_conid.keys() {
             if let Some(position) = positions_by_conid.get(conid) {
+                let from_date;
+                let from_price;
+                let change;
+                if let Some(historical_data) = self.historical_price(*conid).await? {
+                    from_date = Some(historical_data.t);
+                    from_price = Some(historical_data.c);
+                    change = if historical_data.c == 0.0 {
+                        None
+                    } else {
+                        Some((position.mktPrice - historical_data.c) / historical_data.c)
+                    };
+                } else {
+                    from_date = None;
+                    from_price = None;
+                    change = None;
+                }
+
                 let record = ReportRecord {
                     ticker: position.ticker.clone(),
-                    change: changes_by_conid.get(conid).cloned(),
+                    from_date,
+                    from_price,
+                    to_price: position.mktPrice,
+                    change,
                 };
                 report.push(record);
             }
         }
-        report.sort_by(|x, y| x.change.partial_cmp(&y.change).expect("One change is NaN"));
-        for record in report.into_iter() {
-            if let Some(change) = record.change {
-                println!("Stock {} changed {:.2}%", &record.ticker, change * 100.0);
-            } else {
-                println!("Stock {} had unknown changes", &record.ticker);
+        report.sort_by_cached_key(|record| record.ticker.clone());
+
+        match self.cli.format {
+            Format::debug => report.iter().for_each(|record| println!("{:?}", record)),
+            Format::bson => {
+                let bson = bson::to_vec(&report)?;
+                tokio::io::stdout().write_all(&bson).await?;
             }
         }
 
@@ -119,7 +131,7 @@ impl Toy {
         (position.conid, position)
     }
 
-    async fn historical_price(&self, conid: u64) -> anyhow::Result<Option<f64>> {
+    async fn historical_price(&self, conid: u64) -> anyhow::Result<Option<HistoricalDataRecord>> {
         let response = self
             .client
             .get(format!(
@@ -139,8 +151,8 @@ impl Toy {
             .into_iter()
             .sorted_by_key(|record| record.t)
             .collect_vec();
-        let earliest_price = sorted_data.first().map(|record| record.c);
-        Ok(earliest_price)
+        let earliest_data = sorted_data.into_iter().next();
+        Ok(earliest_data)
     }
 }
 
@@ -158,6 +170,7 @@ impl Default for Toy {
             client,
             header,
             account_id: Default::default(),
+            cli: Cli::parse(),
         }
     }
 }
@@ -189,7 +202,14 @@ struct HistoricalDataRecord {
     t: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize)]
 struct ReportRecord {
     ticker: String,
+
+    #[serde(with = "crate::serde::option_time")]
+    from_date: Option<DateTime<Utc>>,
+
+    from_price: Option<f64>,
+    to_price: f64,
     change: Option<f64>,
 }
