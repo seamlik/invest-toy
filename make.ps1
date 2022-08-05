@@ -18,14 +18,11 @@ function Format-PowerShell {
 switch ($args[0]) {
     format {
         Format-PowerShell -Path make.ps1
-        ts-standard --fix cli/
+        eslint --fix cli/
         prettier --write **/*.json **/*.yaml
     }
     run {
         node --loader ts-node/esm cli/src/main.ts
-    }
-    check {
-        eslint cli/
     }
     default {
         throw "Unknown task"

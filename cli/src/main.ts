@@ -43,12 +43,12 @@ class Toy {
     console.table(report, columns)
   }
 
-  async fetchReportEntry(position: PortfolioPosition): Promise<ReportEntry> {
+  async fetchReportEntry (position: PortfolioPosition): Promise<ReportEntry> {
     const data = await this.fetchHistoricalMarketData(position.conid)
     const earlistEntry = data[0]
     const ticker = position.ticker
     if (earlistEntry === undefined) {
-      return { ticker: ticker }
+      return { ticker }
     } else {
       const fromDate = renderDate(earlistEntry.t)
       const fromPrice = earlistEntry.c
@@ -111,7 +111,7 @@ async function fetchIbkr (endpoint: string): Promise<unknown> {
   headers.set('User-Agent', 'Rust')
 
   const endpointFull = `https://127.0.0.1:5000/v1/api/${endpoint}`
-  const response = await fetch(endpointFull, { headers: headers })
+  const response = await fetch(endpointFull, { headers })
   if (!response.ok) {
     throw new Error(`${response.statusText}: ${await response.text()}`)
   }
@@ -173,7 +173,7 @@ function sortRecord (a: ReportEntry, b: ReportEntry): number {
 
 async function main (): Promise<void> {
   // IBKR Gateway uses a self-signed TLS certificate
-  env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
+  env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
   return await new Toy().run()
 }
 
