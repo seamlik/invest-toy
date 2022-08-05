@@ -17,16 +17,15 @@ function Format-PowerShell {
 # Tasks
 switch ($args[0]) {
     format {
-        cargo fmt
         Format-PowerShell -Path make.ps1
-        ts-standard --fix
+        ts-standard --fix cli/
+        prettier --write **/*.json **/*.yaml
     }
     run {
-        cargo run -- --format bson --base64 | node --loader ts-node/esm print.ts
+        node --loader ts-node/esm cli/src/main.ts
     }
     check {
-        cargo clippy
-        eslint print.ts
+        eslint cli/
     }
     default {
         throw "Unknown task"
