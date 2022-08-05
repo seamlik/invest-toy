@@ -6,6 +6,9 @@ use strum_macros::EnumString;
 pub struct Cli {
     #[clap(long, default_value_t = Format::debug)]
     pub format: Format,
+
+    #[clap(long)]
+    pub base64: bool,
 }
 
 #[derive(EnumString, Display)]

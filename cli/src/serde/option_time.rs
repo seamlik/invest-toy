@@ -6,7 +6,7 @@ where
     S: Serializer,
 {
     match src {
-        Some(time) => serializer.serialize_some(time),
+        Some(time) => serializer.serialize_some(&time.timestamp_millis()),
         None => serializer.serialize_none(),
     }
 }

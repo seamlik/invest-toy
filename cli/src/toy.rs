@@ -1,5 +1,6 @@
 use crate::cli::Cli;
 use crate::cli::Format;
+use bson::Document;
 use chrono::prelude::*;
 use clap::Parser;
 use itertools::Itertools;
@@ -78,11 +79,21 @@ impl Toy {
         }
         report.sort_by_cached_key(|record| record.ticker.clone());
 
+        // Writes the report
         match self.cli.format {
             Format::debug => report.iter().for_each(|record| println!("{:?}", record)),
             Format::bson => {
-                let bson = bson::to_vec(&report)?;
-                tokio::io::stdout().write_all(&bson).await?;
+                let mut document = Document::default();
+                document.insert("data", bson::to_bson(&report)?);
+                let bson = bson::to_vec(&document)?;
+                if self.cli.base64 {
+                    let bson_base64 = base64::encode(&bson);
+                    tokio::io::stdout()
+                        .write_all(bson_base64.as_bytes())
+                        .await?;
+                } else {
+                    tokio::io::stdout().write_all(&bson).await?;
+                }
             }
         }
 
