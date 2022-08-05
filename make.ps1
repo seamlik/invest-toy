@@ -19,6 +19,14 @@ switch ($args[0]) {
     format {
         cargo fmt
         Format-PowerShell -Path make.ps1
+        ts-standard --fix
+    }
+    run {
+        cargo run -- --format bson --base64 | node --loader ts-node/esm print.ts
+    }
+    check {
+        cargo clippy
+        eslint print.ts
     }
     default {
         throw "Unknown task"
