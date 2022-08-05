@@ -1,4 +1,5 @@
 import { env } from 'node:process'
+import { SingleBar } from 'cli-progress'
 
 class Toy {
   accountId = ''
@@ -17,40 +18,18 @@ class Toy {
     const portfolio = await this.fetchPortfolio()
     console.info(`Found ${portfolio.length} stocks`)
 
+    // Progress bar
+    const progressBar = new SingleBar({})
+    progressBar.start(portfolio.length, 0)
+
     // Finalize report
     const report: ReportEntry[] = []
     for (const position of portfolio) {
-      const data = await this.fetchHistoricalMarketData(position.conid)
-      const earlistEntry = data[0]
-      const ticker = position.ticker
-      if (earlistEntry === undefined) {
-        report.push({ ticker: ticker })
-      } else {
-        const fromDate = renderDate(earlistEntry.t)
-        const fromPrice = earlistEntry.c
-        const latestEntry = data[data.length - 1]
-        if (latestEntry === undefined) {
-          report.push({ ticker, fromDate, fromPrice })
-        } else {
-          const toPrice = latestEntry.c
-          const entry: ReportEntry = {
-            ticker,
-            fromDate,
-            fromPrice,
-            toDate: renderDate(latestEntry.t),
-            toPrice
-
-          }
-          if (fromPrice !== 0) {
-            const changeRaw = (toPrice - fromPrice) / fromPrice
-            entry.changeRaw = changeRaw
-            entry.change = `${(changeRaw * 100).toFixed(2)}%`
-          }
-          report.push(entry)
-        }
-      }
+      report.push(await this.fetchReportEntry(position))
+      progressBar.increment()
     }
     report.sort(sortRecord)
+    progressBar.stop()
 
     // Write the report
     const columns = [
@@ -62,6 +41,37 @@ class Toy {
       'toPrice'
     ]
     console.table(report, columns)
+  }
+
+  async fetchReportEntry(position: PortfolioPosition): Promise<ReportEntry> {
+    const data = await this.fetchHistoricalMarketData(position.conid)
+    const earlistEntry = data[0]
+    const ticker = position.ticker
+    if (earlistEntry === undefined) {
+      return { ticker: ticker }
+    } else {
+      const fromDate = renderDate(earlistEntry.t)
+      const fromPrice = earlistEntry.c
+      const latestEntry = data[data.length - 1]
+      if (latestEntry === undefined) {
+        return { ticker, fromDate, fromPrice }
+      } else {
+        const toPrice = latestEntry.c
+        const entry: ReportEntry = {
+          ticker,
+          fromDate,
+          fromPrice,
+          toDate: renderDate(latestEntry.t),
+          toPrice
+        }
+        if (fromPrice !== 0) {
+          const changeRaw = (toPrice - fromPrice) / fromPrice
+          entry.changeRaw = changeRaw
+          entry.change = `${(changeRaw * 100).toFixed(2)}%`
+        }
+        return entry
+      }
+    }
   }
 
   async fetchPortfolioAtPage (pageIndex: number): Promise<PortfolioPosition[]> {

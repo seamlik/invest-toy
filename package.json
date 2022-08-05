@@ -1,9 +1,13 @@
 {
   "type": "module",
   "devDependencies": {
+    "@types/cli-progress": "^3",
     "@types/node": "^18",
     "@typescript-eslint/eslint-plugin": "*",
     "@typescript-eslint/parser": "*",
     "ts-node": "^10"
+  },
+  "dependencies": {
+    "cli-progress": "^3"
   }
 }
