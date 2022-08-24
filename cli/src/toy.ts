@@ -2,11 +2,18 @@
 
 import { SingleBar } from 'cli-progress'
 import {
+  RenderedReportEntry,
+  scoreAndRank,
+  ScoringFactors
+} from './algorithm.js'
+import {
   Account,
   HistoricalMarketData,
   HistoricalMarketDataEntry,
   PortfolioPosition
-} from './model'
+} from './model.js'
+
+const FIELD_ID_DIVIDEND_YIELD = 7287
 
 export class Toy {
   accountId = ''
@@ -29,56 +36,60 @@ export class Toy {
     const progressBar = new SingleBar({})
     progressBar.start(portfolio.length, 0)
 
-    // Finalize report
-    const report: ReportEntry[] = []
-    for (const position of portfolio) {
-      report.push(await this.fetchReportEntry(position))
-      progressBar.increment()
-    }
-    report.sort(sortRecord)
-    progressBar.stop()
+    try {
+      // Finalize report
+      const report = await this.fetchReport(portfolio, progressBar)
+      progressBar.stop()
 
-    // Write the report
-    const columns = [
-      'ticker',
-      'change',
-      'fromDate',
-      'fromPrice',
-      'toDate',
-      'toPrice'
-    ]
-    console.table(report, columns)
+      // Write the report
+      console.table(report)
+    } finally {
+      progressBar.stop()
+    }
   }
 
-  async fetchReportEntry (position: PortfolioPosition): Promise<ReportEntry> {
-    const data = await this.fetchHistoricalMarketData(position.conid)
-    const earlistEntry = data[0]
-    const ticker = position.ticker
-    if (earlistEntry === undefined) {
-      return { ticker }
-    } else {
-      const fromDate = renderDate(earlistEntry.t)
-      const fromPrice = earlistEntry.c
-      const latestEntry = data[data.length - 1]
-      if (latestEntry === undefined) {
-        return { ticker, fromDate, fromPrice }
+  async fetchReport (
+    portfolio: PortfolioPosition[],
+    progressBar: SingleBar
+  ): Promise<RenderedReportEntry[]> {
+    const dividendYieldList = await this.fetchDividendYield(portfolio.map(position => position.conid))
+    const dividendYieldMapByTicker = new Map<string, number>()
+    portfolio.forEach((position, index) => dividendYieldMapByTicker.set(position.ticker, dividendYieldList[index]))
+
+    const factors = new Map<string, ScoringFactors>()
+
+    for (const position of portfolio) {
+      const marketHistory = await this.fetchHistoricalMarketData(position.conid)
+      const earlistEntry = marketHistory[0]
+      const ticker = position.ticker
+      const dividendYield = dividendYieldMapByTicker.get(ticker)
+      if (earlistEntry === undefined) {
+        console.warn(`${ticker} has no market history`)
+        factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+        progressBar.increment()
       } else {
-        const toPrice = latestEntry.c
-        const entry: ReportEntry = {
-          ticker,
-          fromDate,
-          fromPrice,
-          toDate: renderDate(latestEntry.t),
-          toPrice
+        const fromPrice = earlistEntry.c
+        const latestEntry = marketHistory[marketHistory.length - 1]
+        if (latestEntry === undefined) {
+          console.warn(`${ticker} has only 1 entry in market history`)
+          factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+          progressBar.increment()
+        } else {
+          const toPrice = latestEntry.c
+          if (fromPrice === 0) {
+            console.warn(`${ticker} has a 0 as its price a month ago`)
+            factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+            progressBar.increment()
+          } else {
+            const change = (toPrice - fromPrice) / fromPrice
+            factors.set(ticker, new ScoringFactors(dividendYield ?? -1, change))
+            progressBar.increment()
+          }
         }
-        if (fromPrice !== 0) {
-          const changeRaw = (toPrice - fromPrice) / fromPrice
-          entry.changeRaw = changeRaw
-          entry.change = `${(changeRaw * 100).toFixed(2)}%`
-        }
-        return entry
       }
     }
+
+    return scoreAndRank(factors)
   }
 
   async fetchPortfolioAtPage (pageIndex: number): Promise<PortfolioPosition[]> {
@@ -111,6 +122,26 @@ export class Toy {
       .data
       .sort((a, b) => a.t - b.t)
   }
+
+  async fetchDividendYield (conids: number[]): Promise<number[]> {
+    const conidsText = conids.join(',')
+    const endpoint = `iserver/marketdata/snapshot?conids=${conidsText}&fields=${FIELD_ID_DIVIDEND_YIELD}`
+    return (await fetchIbkr(endpoint) as unknown[]).map(parseDividendYield)
+  }
+}
+
+function parseDividendYield (data: unknown): number {
+  if (typeof (data) !== 'object') {
+    return -1
+  }
+
+  const map = new Map(Object.entries(data as object))
+  const dividendYield = map.get(`${FIELD_ID_DIVIDEND_YIELD}`)
+  if (typeof (dividendYield) === 'string') {
+    return parseFloat(dividendYield)
+  } else {
+    return -1
+  }
 }
 
 async function fetchIbkr (endpoint: string): Promise<unknown> {
@@ -124,31 +155,4 @@ async function fetchIbkr (endpoint: string): Promise<unknown> {
   }
 
   return await response.json()
-}
-
-function renderDate (timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString()
-}
-
-interface ReportEntry {
-  ticker: string
-  fromDate?: string
-  fromPrice?: number
-  toDate?: string
-  toPrice?: number
-
-  change?: string
-  changeRaw?: number
-}
-
-function sortRecord (a: ReportEntry, b: ReportEntry): number {
-  if (a.changeRaw !== undefined && b.changeRaw !== undefined) {
-    return a.changeRaw - b.changeRaw
-  } else if (a.changeRaw === undefined && b.changeRaw !== undefined) {
-    return 1
-  } else if (a.changeRaw !== undefined && b.changeRaw === undefined) {
-    return -1
-  } else {
-    return 0
-  }
 }

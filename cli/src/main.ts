@@ -1,5 +1,5 @@
 import { env } from 'node:process'
-import { Toy } from './toy'
+import { Toy } from './toy.js'
 
 async function main (): Promise<void> {
   // IBKR Gateway uses a self-signed TLS certificate
