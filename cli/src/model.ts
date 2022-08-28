@@ -1,7 +1,11 @@
 // Data models in the REST API from IBKR
 
-export interface Account {
+export interface PortfolioAccount {
   accountId: string
+}
+
+export interface IserverAccount {
+  accounts: string[]
 }
 
 export interface PortfolioPosition {

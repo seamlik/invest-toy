@@ -7,9 +7,10 @@ import {
   ScoringFactors
 } from './algorithm.js'
 import {
-  Account,
   HistoricalMarketData,
   HistoricalMarketDataEntry,
+  IserverAccount,
+  PortfolioAccount,
   PortfolioPosition
 } from './model.js'
 
@@ -20,10 +21,17 @@ export class Toy {
 
   async run (): Promise<void> {
     // Account ID
-    const accounts = await fetchIbkr('portfolio/accounts') as Account[]
-    const defaultAccount = accounts[0]
+    const portfolioAccounts = await fetchIbkr('portfolio/accounts') as PortfolioAccount[]
+
+    // Some API requires querying this endpoint first
+    const iserverAccounts = await fetchIbkr('iserver/accounts') as IserverAccount
+    if (iserverAccounts.accounts.length === 0) {
+      throw new Error('No brokerage account found')
+    }
+
+    const defaultAccount = portfolioAccounts[0]
     if (defaultAccount === undefined) {
-      throw new Error('No account found')
+      throw new Error('No default account found')
     } else {
       this.accountId = defaultAccount.accountId
     }
