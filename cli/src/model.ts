@@ -11,6 +11,7 @@ export interface IserverAccount {
 export interface PortfolioPosition {
   conid: number
   ticker: string
+  position: number
 }
 
 export interface HistoricalMarketData {

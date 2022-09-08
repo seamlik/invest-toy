@@ -106,12 +106,13 @@ export class Toy {
 
   async fetchPortfolio (): Promise<PortfolioPosition[]> {
     // Fetch the first page always
+    // Filter out entries with 0 position because IBKR still include stocks I recently sold
     let currentPageIndex = 0
-    const positions: PortfolioPosition[] = await this.fetchPortfolioAtPage(0)
+    const positions: PortfolioPosition[] = (await this.fetchPortfolioAtPage(0)).filter(entry => entry.position !== 0)
     let currentPageSize = positions.length
 
     while (currentPageSize >= 30) {
-      const nextPage = await this.fetchPortfolioAtPage(++currentPageIndex)
+      const nextPage = (await this.fetchPortfolioAtPage(++currentPageIndex)).filter(entry => entry.position !== 0)
       currentPageSize = nextPage.length
       positions.push(...nextPage)
     }
