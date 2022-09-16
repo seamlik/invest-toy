@@ -12,6 +12,7 @@ export interface PortfolioPosition {
   conid: number
   ticker: string
   position: number
+  assetClass: string
 }
 
 export interface HistoricalMarketData {

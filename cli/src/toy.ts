@@ -106,7 +106,10 @@ export class Toy {
   }
 
   async fetchPortfolioAtPage (pageIndex: number): Promise<PortfolioPosition[]> {
-    return await fetchIbkr(`portfolio/${this.accountId}/positions/${pageIndex}`) as PortfolioPosition[]
+    const allPositions = await fetchIbkr(
+      `portfolio/${this.accountId}/positions/${pageIndex}`
+    ) as PortfolioPosition[]
+    return allPositions.filter(pos => pos.assetClass === 'STK')
   }
 
   async fetchPortfolio (): Promise<PortfolioPosition[]> {
