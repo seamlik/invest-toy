@@ -1,11 +1,16 @@
 {
   "type": "module",
   "devDependencies": {
+    "@babel/core": "^7",
+    "@babel/preset-env": "^7",
+    "@babel/preset-typescript": "^7",
     "@types/cli-progress": "^3",
     "@types/node": "^18",
     "@typescript-eslint/eslint-plugin": "*",
     "@typescript-eslint/parser": "*",
+    "babel-jest": "^29",
     "eslint-config-standard-with-typescript": "*",
+    "jest": "^29",
     "ts-node": "^10"
   },
   "dependencies": {

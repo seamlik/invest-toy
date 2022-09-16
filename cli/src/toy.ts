@@ -14,7 +14,7 @@ import {
   PortfolioPosition
 } from './model.js'
 
-const FIELD_ID_DIVIDEND_YIELD = 7287
+const FIELD_ID_PE_RATIO = 7290
 
 export class Toy {
   accountId = ''
@@ -60,9 +60,14 @@ export class Toy {
     portfolio: PortfolioPosition[],
     progressBar: SingleBar
   ): Promise<RenderedReportEntry[]> {
-    const dividendYieldList = await this.fetchDividendYield(portfolio.map(position => position.conid))
-    const dividendYieldMapByTicker = new Map<string, number>()
-    portfolio.forEach((position, index) => dividendYieldMapByTicker.set(position.ticker, dividendYieldList[index]))
+    const PERatioList = await this.fetchPERatio(portfolio.map(position => position.conid))
+    const PERatioMapByTicker = new Map<string, number>()
+    portfolio.forEach((position, index) => {
+      const PERatio = PERatioList[index]
+      if (PERatio !== undefined) {
+        PERatioMapByTicker.set(position.ticker, PERatio)
+      }
+    })
 
     const factors = new Map<string, ScoringFactors>()
 
@@ -70,27 +75,27 @@ export class Toy {
       const marketHistory = await this.fetchHistoricalMarketData(position.conid)
       const earlistEntry = marketHistory[0]
       const ticker = position.ticker
-      const dividendYield = dividendYieldMapByTicker.get(ticker)
+      const PERatio = PERatioMapByTicker.get(ticker)
       if (earlistEntry === undefined) {
         console.warn(`${ticker} has no market history`)
-        factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+        factors.set(ticker, new ScoringFactors(PERatio, undefined))
         progressBar.increment()
       } else {
         const fromPrice = earlistEntry.c
         const latestEntry = marketHistory[marketHistory.length - 1]
         if (latestEntry === undefined) {
           console.warn(`${ticker} has only 1 entry in market history`)
-          factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+          factors.set(ticker, new ScoringFactors(PERatio, undefined))
           progressBar.increment()
         } else {
           const toPrice = latestEntry.c
           if (fromPrice === 0) {
             console.warn(`${ticker} has a 0 as its price a month ago`)
-            factors.set(ticker, new ScoringFactors(dividendYield ?? -1, undefined))
+            factors.set(ticker, new ScoringFactors(PERatio, undefined))
             progressBar.increment()
           } else {
             const change = (toPrice - fromPrice) / fromPrice
-            factors.set(ticker, new ScoringFactors(dividendYield ?? -1, change))
+            factors.set(ticker, new ScoringFactors(PERatio, change))
             progressBar.increment()
           }
         }
@@ -132,24 +137,24 @@ export class Toy {
       .sort((a, b) => a.t - b.t)
   }
 
-  async fetchDividendYield (conids: number[]): Promise<number[]> {
+  async fetchPERatio (conids: number[]): Promise<Array<number | undefined>> {
     const conidsText = conids.join(',')
-    const endpoint = `iserver/marketdata/snapshot?conids=${conidsText}&fields=${FIELD_ID_DIVIDEND_YIELD}`
-    return (await fetchIbkr(endpoint) as unknown[]).map(parseDividendYield)
+    const endpoint = `iserver/marketdata/snapshot?conids=${conidsText}&fields=${FIELD_ID_PE_RATIO}`
+    return (await fetchIbkr(endpoint) as unknown[]).map(parsePERatio)
   }
 }
 
-function parseDividendYield (data: unknown): number {
+function parsePERatio (data: unknown): number | undefined {
   if (typeof (data) !== 'object') {
-    return -1
+    return undefined
   }
 
   const map = new Map(Object.entries(data as object))
-  const dividendYield = map.get(`${FIELD_ID_DIVIDEND_YIELD}`)
-  if (typeof (dividendYield) === 'string') {
-    return parseFloat(dividendYield)
+  const PERatio = map.get(FIELD_ID_PE_RATIO.toString())
+  if (typeof (PERatio) === 'string') {
+    return parseFloat(PERatio)
   } else {
-    return -1
+    return undefined
   }
 }
 

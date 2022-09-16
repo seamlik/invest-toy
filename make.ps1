@@ -14,6 +14,12 @@ function Format-PowerShell {
     Invoke-Formatter -ScriptDefinition $content | Out-File -NoNewline -FilePath $Path
 }
 
+function StopIfLastCommandFailed {
+    if (!$?) {
+        throw "The last command failed"
+    }
+}
+
 # Tasks
 switch ($args[0]) {
     format {
@@ -23,6 +29,13 @@ switch ($args[0]) {
     }
     run {
         node --loader ts-node/esm cli/src/main.ts
+    }
+    check {
+        npx tsc --noEmit
+        StopIfLastCommandFailed
+        
+        npx jest
+        StopIfLastCommandFailed
     }
     default {
         throw "Unknown task"
