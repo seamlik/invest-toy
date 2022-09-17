@@ -33,7 +33,7 @@ switch ($args[0]) {
     check {
         npx tsc --noEmit
         StopIfLastCommandFailed
-        
+
         npx jest
         StopIfLastCommandFailed
     }
