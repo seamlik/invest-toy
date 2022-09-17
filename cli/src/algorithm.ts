@@ -1,13 +1,23 @@
 export function scoreAndRank (candidates: Map<string, ScoringFactors>): RenderedReportEntry[] {
-  // Price change
+  // Recent change
   const candidatesOfRecentChange = new Map<string, number>()
   candidates.forEach((factors, ticker) => {
-    if (factors.change !== undefined && factors.change < 0) {
-      // Choose stocks that dropped the most
-      candidatesOfRecentChange.set(ticker, Math.abs(factors.change))
+    if (factors.recentChange !== undefined && factors.recentChange < 0) {
+      // Choose stocks that dropped the most recently
+      candidatesOfRecentChange.set(ticker, Math.abs(factors.recentChange))
     }
   })
   const scoresOfRecentChange = scoreAndRankGeneric(candidatesOfRecentChange)
+
+  // Long-term change
+  const candidatesOfLongTermChange = new Map<string, number>()
+  candidates.forEach((factors, ticker) => {
+    if (factors.longTermChange !== undefined && factors.longTermChange > 0) {
+      // Choose stocks that increased the most in the long term
+      candidatesOfLongTermChange.set(ticker, factors.longTermChange)
+    }
+  })
+  const scoresOfLongTermChange = scoreAndRankGeneric(candidatesOfLongTermChange)
 
   // Price over earnings
   const candidatesOfPERatio = new Map<string, number>()
@@ -18,17 +28,14 @@ export function scoreAndRank (candidates: Map<string, ScoringFactors>): Rendered
   })
   const scoresOfPERatio = scoreAndRankGenericInverted(candidatesOfPERatio)
 
-  console.info(scoresOfPERatio)
-
   // Aggregate scores
   const report: ReportEntry[] = []
   candidates.forEach((factors, ticker) => {
-    report.push(new ReportEntry(
-      ticker,
-      (scoresOfRecentChange.get(ticker) ?? 0) + (scoresOfPERatio.get(ticker) ?? 0),
-      factors.PERatio,
-      factors.change
-    ))
+    const totalScore =
+      (scoresOfRecentChange.get(ticker) ?? 0) +
+      (scoresOfLongTermChange.get(ticker) ?? 0) +
+      (scoresOfPERatio.get(ticker) ?? 0)
+    report.push(new ReportEntry(ticker, totalScore, factors))
   })
 
   report.sort(ReportEntry.sort)
@@ -43,31 +50,43 @@ export class ScoringFactors {
     public readonly PERatio?: number,
 
     /**
-     * Change in stock prices.
+     * Average monthly change in stock prices in the long term.
+     *
+     * Same representation as `recentChange`.
+     */
+    public readonly longTermChange?: number,
+
+    /**
+     * 1-month change in stock prices.
      *
      * Positive means the price increased, while negative means the price decreased.
      * Undefined means data is unavailable.
      */
-    public readonly change?: number
+    public readonly recentChange?: number
   ) {}
 }
 
 class ReportEntry {
+  private readonly unknownText = 'Unknown'
+
   constructor (
     public readonly ticker: string,
     public readonly score: number,
-    public readonly PERatio?: number,
-    public readonly change?: number
+    public readonly factors: ScoringFactors
   ) {}
 
   render (): RenderedReportEntry {
-    const unknownText = 'Unknown'
     return new RenderedReportEntry(
       this.ticker,
-      this.score < 0 ? unknownText : (this.score * 100).toFixed(2),
-      this.PERatio?.toFixed(2) ?? 'None',
-      this.change === undefined ? unknownText : `${(this.change * 100).toFixed(2)}%`
+      this.score < 0 ? this.unknownText : (this.score * 100).toFixed(2),
+      this.factors.PERatio?.toFixed(2) ?? 'None',
+      this.renderChange(this.factors.recentChange),
+      this.renderChange(this.factors.longTermChange)
     )
+  }
+
+  private renderChange (change?: number): string {
+    return change === undefined ? this.unknownText : `${(change * 100).toFixed(2)}%`
   }
 
   static sort (a: ReportEntry, b: ReportEntry): number {
@@ -80,7 +99,8 @@ export class RenderedReportEntry {
     public readonly ticker: string,
     public readonly score: string,
     public readonly PERatio: string,
-    public readonly change: string
+    public readonly recentChange: string,
+    public readonly longTermChange: string
   ) {}
 }
 

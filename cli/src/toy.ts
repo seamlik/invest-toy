@@ -15,6 +15,7 @@ import {
 } from './model.js'
 
 const FIELD_ID_PE_RATIO = 7290
+const LONG_TERM_YEARS = 8
 
 export class Toy {
   accountId = ''
@@ -60,46 +61,44 @@ export class Toy {
     portfolio: PortfolioPosition[],
     progressBar: SingleBar
   ): Promise<RenderedReportEntry[]> {
-    const PERatioList = await this.fetchPERatio(portfolio.map(position => position.conid))
-    const PERatioMapByTicker = new Map<string, number>()
-    portfolio.forEach((position, index) => {
-      const PERatio = PERatioList[index]
-      if (PERatio !== undefined) {
-        PERatioMapByTicker.set(position.ticker, PERatio)
-      }
-    })
-
+    const PERatioMapByTicker = await this.fetchPERatio(portfolio)
     const factors = new Map<string, ScoringFactors>()
 
     for (const position of portfolio) {
       const marketHistory = await this.fetchHistoricalMarketData(position.conid)
-      const earlistEntry = marketHistory[0]
+      const earliestEntry = marketHistory[0]
+      const latestEntry = marketHistory[marketHistory.length - 1]
+      const secondLatestEntry = marketHistory[marketHistory.length - 2]
       const ticker = position.ticker
       const PERatio = PERatioMapByTicker.get(ticker)
-      if (earlistEntry === undefined) {
+      if (earliestEntry === undefined) {
         console.warn(`${ticker} has no market history`)
-        factors.set(ticker, new ScoringFactors(PERatio, undefined))
-        progressBar.increment()
+        factors.set(ticker, new ScoringFactors(PERatio))
       } else {
-        const fromPrice = earlistEntry.c
-        const latestEntry = marketHistory[marketHistory.length - 1]
         if (latestEntry === undefined) {
-          console.warn(`${ticker} has only 1 entry in market history`)
-          factors.set(ticker, new ScoringFactors(PERatio, undefined))
-          progressBar.increment()
+          console.warn(`${ticker} has only 1 entry in market history, cannot calculate any changes.`)
+          factors.set(ticker, new ScoringFactors(PERatio))
         } else {
-          const toPrice = latestEntry.c
-          if (fromPrice === 0) {
-            console.warn(`${ticker} has a 0 as its price a month ago`)
-            factors.set(ticker, new ScoringFactors(PERatio, undefined))
-            progressBar.increment()
+          let longTermChange: number | undefined
+          if (earliestEntry.c === 0) {
+            console.warn(`${ticker} has a 0 as its ealiest price, cannot calculate the long-term change.`)
+          } else if (marketHistory.length < 12 * LONG_TERM_YEARS - 1) {
+            console.warn(`${ticker} has a market history shorter than ${LONG_TERM_YEARS} years (${marketHistory.length} months), ignoring the long-term change.`)
           } else {
-            const change = (toPrice - fromPrice) / fromPrice
-            factors.set(ticker, new ScoringFactors(PERatio, change))
-            progressBar.increment()
+            longTermChange = (latestEntry.c - earliestEntry.c) / earliestEntry.c
           }
+
+          let recentChange: number | undefined
+          if (secondLatestEntry.c === 0) {
+            console.warn(`${ticker} has a 0 as its price from the last month, cannot calculate the recent change.`)
+          } else {
+            recentChange = (latestEntry.c - secondLatestEntry.c) / secondLatestEntry.c
+          }
+
+          factors.set(ticker, new ScoringFactors(PERatio, longTermChange, recentChange))
         }
       }
+      progressBar.increment()
     }
 
     return scoreAndRank(factors)
@@ -134,16 +133,24 @@ export class Toy {
      * The entries are sorted according to their timestamp.
      */
   async fetchHistoricalMarketData (conid: number): Promise<HistoricalMarketDataEntry[]> {
-    const endpoint = `iserver/marketdata/history?conid=${conid}&period=1m&bar=1d&outsideRth=true`
+    const endpoint = `iserver/marketdata/history?conid=${conid}&period=${LONG_TERM_YEARS}y&bar=1m&outsideRth=true`
     return (await fetchIbkr(endpoint) as HistoricalMarketData)
       .data
       .sort((a, b) => a.t - b.t)
   }
 
-  async fetchPERatio (conids: number[]): Promise<Array<number | undefined>> {
-    const conidsText = conids.join(',')
+  async fetchPERatio (portfolio: PortfolioPosition[]): Promise<Map<string, number>> {
+    const conidsText = portfolio.map(pos => pos.conid).join(',')
     const endpoint = `iserver/marketdata/snapshot?conids=${conidsText}&fields=${FIELD_ID_PE_RATIO}`
-    return (await fetchIbkr(endpoint) as unknown[]).map(parsePERatio)
+    const PERatioList = (await fetchIbkr(endpoint) as unknown[]).map(parsePERatio)
+    const PERatioMapByTicker = new Map<string, number>()
+    portfolio.forEach((position, index) => {
+      const PERatio = PERatioList[index]
+      if (PERatio !== undefined) {
+        PERatioMapByTicker.set(position.ticker, PERatio)
+      }
+    })
+    return PERatioMapByTicker
   }
 }
 
