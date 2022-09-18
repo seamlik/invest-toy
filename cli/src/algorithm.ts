@@ -50,14 +50,14 @@ export class ScoringFactors {
     public readonly PERatio?: number,
 
     /**
-     * Average monthly change in stock prices in the long term.
+     * Change of the stock price in the long term.
      *
      * Same representation as `shortTermChange`.
      */
     public readonly longTermChange?: number,
 
     /**
-     * 1-month change in stock prices.
+     * Change of the stock price in the short term.
      *
      * Positive means the price increased, while negative means the price decreased.
      * Undefined means data is unavailable.
