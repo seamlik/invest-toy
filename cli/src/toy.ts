@@ -13,6 +13,7 @@ import {
   PortfolioAccount,
   PortfolioPosition
 } from './model.js'
+import { lastEntryOf } from './util.js'
 
 const FIELD_ID_PE_RATIO = 7290
 const LONG_TERM_YEARS = 8
@@ -65,43 +66,87 @@ export class Toy {
     const factors = new Map<string, ScoringFactors>()
 
     for (const position of portfolio) {
-      const marketHistory = await this.fetchHistoricalMarketData(position.conid)
-      const earliestEntry = marketHistory[0]
-      const latestEntry = marketHistory[marketHistory.length - 1]
-      const secondLatestEntry = marketHistory[marketHistory.length - 2]
+      const marketHistorySinceLastMonth = await this.fetchHistoricalMarketData(
+        position.conid,
+        MarketHistoryPeriod.SHORT_TERM
+      )
+      const marketHistorySinceLongTerm = await this.fetchHistoricalMarketData(
+        position.conid,
+        MarketHistoryPeriod.LONG_TERM
+      )
+      const earliestEntry = lastEntryOf(marketHistorySinceLongTerm)
+      const latestEntry = marketHistorySinceLastMonth[0]
+      const lastMonthEntry = this.lastMonthEntryOf(marketHistorySinceLastMonth)
       const ticker = position.ticker
       const PERatio = PERatioMapByTicker.get(ticker)
-      if (earliestEntry === undefined) {
+      if (latestEntry === undefined) {
         console.warn(`${ticker} has no market history`)
         factors.set(ticker, new ScoringFactors(PERatio))
       } else {
-        if (latestEntry === undefined) {
-          console.warn(`${ticker} has only 1 entry in market history, cannot calculate any changes.`)
-          factors.set(ticker, new ScoringFactors(PERatio))
+        let longTermChange: number | undefined
+        if (marketHistorySinceLongTerm.length < LONG_TERM_YEARS * 12 - 4) {
+          console.warn(`${ticker} has not enough long-term history (${marketHistorySinceLongTerm.length} months), ignoring the long-term change.`)
         } else {
-          let longTermChange: number | undefined
-          if (earliestEntry.c === 0) {
-            console.warn(`${ticker} has a 0 as its ealiest price, cannot calculate the long-term change.`)
-          } else if (marketHistory.length < 12 * LONG_TERM_YEARS - 1) {
-            console.warn(`${ticker} has a market history shorter than ${LONG_TERM_YEARS} years (${marketHistory.length} months), ignoring the long-term change.`)
-          } else {
-            longTermChange = (latestEntry.c - earliestEntry.c) / earliestEntry.c
-          }
-
-          let recentChange: number | undefined
-          if (secondLatestEntry.c === 0) {
-            console.warn(`${ticker} has a 0 as its price from the last month, cannot calculate the recent change.`)
-          } else {
-            recentChange = (latestEntry.c - secondLatestEntry.c) / secondLatestEntry.c
-          }
-
-          factors.set(ticker, new ScoringFactors(PERatio, longTermChange, recentChange))
+          longTermChange = this.calculateChange(
+            ticker,
+            MarketHistoryPeriod.LONG_TERM,
+            latestEntry,
+            earliestEntry
+          )
         }
+
+        let recentChange: number | undefined
+        if (marketHistorySinceLastMonth.length < 30) {
+          console.warn(`${ticker} has not enough short-term history (${marketHistorySinceLastMonth.length} months), ignoring the short-term change.`)
+        } else {
+          recentChange = this.calculateChange(
+            ticker,
+            MarketHistoryPeriod.SHORT_TERM,
+            latestEntry,
+            lastMonthEntry
+          )
+        }
+
+        factors.set(ticker, new ScoringFactors(PERatio, longTermChange, recentChange))
       }
+
       progressBar.increment()
     }
 
     return scoreAndRank(factors)
+  }
+
+  lastMonthEntryOf (history: HistoricalMarketDataEntry[]): HistoricalMarketDataEntry | undefined {
+    const latest = history[0]
+    if (latest === undefined) {
+      return undefined
+    }
+
+    const millisecondsOf1Month = 1000 * 60 * 60 * 24 * 30
+    for (const entry of history) {
+      if (latest.t - entry.t >= millisecondsOf1Month) {
+        return entry
+      }
+    }
+
+    return undefined
+  }
+
+  calculateChange (
+    ticker: string,
+    period: MarketHistoryPeriod,
+    latestEntry: HistoricalMarketDataEntry,
+    earliestEntry?: HistoricalMarketDataEntry
+  ): number | undefined {
+    if (earliestEntry === undefined) {
+      console.warn(`${ticker} has no earliest price, cannot calculate the ${MarketHistoryPeriod[period]} change.`)
+      return undefined
+    } else if (earliestEntry.c === 0) {
+      console.warn(`${ticker} has a 0 as its ealiest price, cannot calculate the ${MarketHistoryPeriod[period]} change.`)
+      return undefined
+    } else {
+      return (latestEntry.c - earliestEntry.c) / earliestEntry.c
+    }
   }
 
   async fetchPortfolioAtPage (pageIndex: number): Promise<PortfolioPosition[]> {
@@ -115,7 +160,7 @@ export class Toy {
     // Fetch the first page always
     // Filter out entries with 0 position because IBKR still include stocks I recently sold
     let currentPageIndex = 0
-    const positions: PortfolioPosition[] = (await this.fetchPortfolioAtPage(0)).filter(entry => entry.position !== 0)
+    const positions = (await this.fetchPortfolioAtPage(0)).filter(entry => entry.position !== 0)
     let currentPageSize = positions.length
 
     while (currentPageSize >= 30) {
@@ -132,11 +177,26 @@ export class Toy {
      *
      * The entries are sorted according to their timestamp.
      */
-  async fetchHistoricalMarketData (conid: number): Promise<HistoricalMarketDataEntry[]> {
-    const endpoint = `iserver/marketdata/history?conid=${conid}&period=${LONG_TERM_YEARS}y&bar=1m&outsideRth=true`
+  async fetchHistoricalMarketData (
+    conid: number,
+    period: MarketHistoryPeriod
+  ): Promise<HistoricalMarketDataEntry[]> {
+    let paramPeriod: string
+    let paramBar: string
+    switch (period) {
+      case MarketHistoryPeriod.LONG_TERM:
+        paramPeriod = `${LONG_TERM_YEARS}y`
+        paramBar = '1m'
+        break
+      case MarketHistoryPeriod.SHORT_TERM:
+        paramPeriod = '2m'
+        paramBar = '1d'
+        break
+    }
+    const endpoint = `iserver/marketdata/history?conid=${conid}&period=${paramPeriod}&bar=${paramBar}&outsideRth=false`
     return (await fetchIbkr(endpoint) as HistoricalMarketData)
       .data
-      .sort((a, b) => a.t - b.t)
+      .sort((a, b) => b.t - a.t)
   }
 
   async fetchPERatio (portfolio: PortfolioPosition[]): Promise<Map<string, number>> {
@@ -179,4 +239,9 @@ async function fetchIbkr (endpoint: string): Promise<unknown> {
   }
 
   return await response.json()
+}
+
+enum MarketHistoryPeriod {
+  LONG_TERM,
+  SHORT_TERM,
 }
