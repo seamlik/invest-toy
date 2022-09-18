@@ -95,11 +95,11 @@ export class Toy {
           )
         }
 
-        let recentChange: number | undefined
+        let shortTermChange: number | undefined
         if (marketHistorySinceLastMonth.length < 30) {
           console.warn(`${ticker} has not enough short-term history (${marketHistorySinceLastMonth.length} months), ignoring the short-term change.`)
         } else {
-          recentChange = this.calculateChange(
+          shortTermChange = this.calculateChange(
             ticker,
             MarketHistoryPeriod.SHORT_TERM,
             latestEntry,
@@ -107,7 +107,7 @@ export class Toy {
           )
         }
 
-        factors.set(ticker, new ScoringFactors(PERatio, longTermChange, recentChange))
+        factors.set(ticker, new ScoringFactors(PERatio, longTermChange, shortTermChange))
       }
 
       progressBar.increment()

@@ -1,13 +1,13 @@
 export function scoreAndRank (candidates: Map<string, ScoringFactors>): RenderedReportEntry[] {
   // Recent change
-  const candidatesOfRecentChange = new Map<string, number>()
+  const candidatesOfShortTermChange = new Map<string, number>()
   candidates.forEach((factors, ticker) => {
-    if (factors.recentChange !== undefined && factors.recentChange < 0) {
+    if (factors.shortTermChange !== undefined && factors.shortTermChange < 0) {
       // Choose stocks that dropped the most recently
-      candidatesOfRecentChange.set(ticker, Math.abs(factors.recentChange))
+      candidatesOfShortTermChange.set(ticker, Math.abs(factors.shortTermChange))
     }
   })
-  const scoresOfRecentChange = scoreAndRankGeneric(candidatesOfRecentChange)
+  const scoresOfShortTermChange = scoreAndRankGeneric(candidatesOfShortTermChange)
 
   // Long-term change
   const candidatesOfLongTermChange = new Map<string, number>()
@@ -32,7 +32,7 @@ export function scoreAndRank (candidates: Map<string, ScoringFactors>): Rendered
   const report: ReportEntry[] = []
   candidates.forEach((factors, ticker) => {
     const totalScore =
-      (scoresOfRecentChange.get(ticker) ?? 0) +
+      (scoresOfShortTermChange.get(ticker) ?? 0) +
       (scoresOfLongTermChange.get(ticker) ?? 0) +
       (scoresOfPERatio.get(ticker) ?? 0)
     report.push(new ReportEntry(ticker, totalScore, factors))
@@ -52,7 +52,7 @@ export class ScoringFactors {
     /**
      * Average monthly change in stock prices in the long term.
      *
-     * Same representation as `recentChange`.
+     * Same representation as `shortTermChange`.
      */
     public readonly longTermChange?: number,
 
@@ -62,7 +62,7 @@ export class ScoringFactors {
      * Positive means the price increased, while negative means the price decreased.
      * Undefined means data is unavailable.
      */
-    public readonly recentChange?: number
+    public readonly shortTermChange?: number
   ) {}
 }
 
@@ -80,7 +80,7 @@ class ReportEntry {
       this.ticker,
       this.score < 0 ? this.unknownText : (this.score * 100).toFixed(2),
       this.factors.PERatio?.toFixed(2) ?? 'None',
-      this.renderChange(this.factors.recentChange),
+      this.renderChange(this.factors.shortTermChange),
       this.renderChange(this.factors.longTermChange)
     )
   }
@@ -99,7 +99,7 @@ export class RenderedReportEntry {
     public readonly ticker: string,
     public readonly score: string,
     public readonly PERatio: string,
-    public readonly recentChange: string,
+    public readonly shortTermChange: string,
     public readonly longTermChange: string
   ) {}
 }
