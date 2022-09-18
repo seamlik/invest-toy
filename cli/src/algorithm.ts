@@ -32,7 +32,7 @@ export function scoreAndRank (candidates: Map<string, ScoringFactors>): Rendered
   const report: ReportEntry[] = []
   candidates.forEach((factors, ticker) => {
     const totalScore =
-      (scoresOfShortTermChange.get(ticker) ?? 0) +
+      (scoresOfShortTermChange.get(ticker) ?? 0) * 2 +
       (scoresOfLongTermChange.get(ticker) ?? 0) +
       (scoresOfPERatio.get(ticker) ?? 0)
     report.push(new ReportEntry(ticker, totalScore, factors))
