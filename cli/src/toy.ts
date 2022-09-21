@@ -16,7 +16,7 @@ import {
 import { lastEntryOf } from './util.js'
 
 const FIELD_ID_PE_RATIO = 7290
-const LONG_TERM_YEARS = 8
+const LONG_TERM_YEARS = 6
 
 export class Toy {
   accountId = ''
