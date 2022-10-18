@@ -14,6 +14,7 @@ import {
   PortfolioPosition
 } from './model.js'
 import { lastEntryOf } from './util.js'
+import { SCORE_OVERRIDES } from './override.js'
 
 const FIELD_ID_PE_RATIO = 7290
 const LONG_TERM_YEARS = 6
@@ -66,6 +67,15 @@ export class Toy {
     const factors = new Map<string, ScoringFactors>()
 
     for (const position of portfolio) {
+      const ticker = position.ticker
+
+      const overiddenScore = SCORE_OVERRIDES.get(ticker)
+      if (overiddenScore !== undefined) {
+        factors.set(ticker, overiddenScore)
+        progressBar.increment()
+        continue
+      }
+
       const marketHistorySinceLastMonth = await this.fetchHistoricalMarketData(
         position.conid,
         MarketHistoryPeriod.SHORT_TERM
@@ -77,7 +87,6 @@ export class Toy {
       const earliestEntry = lastEntryOf(marketHistorySinceLongTerm)
       const latestEntry = marketHistorySinceLastMonth[0]
       const lastMonthEntry = this.lastMonthEntryOf(marketHistorySinceLastMonth)
-      const ticker = position.ticker
       const PERatio = PERatioMapByTicker.get(ticker)
       if (latestEntry === undefined) {
         console.warn(`${ticker} has no market history`)
