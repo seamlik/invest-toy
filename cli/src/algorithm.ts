@@ -103,35 +103,3 @@ export class RenderedReportEntry {
     public readonly longTermChange: string
   ) {}
 }
-
-export function scoreAndRankGeneric (candidates: Map<string, number>): Map<string, number> {
-  const totalNotional = totalNotionalOf(candidates)
-  const scores = new Map<string, number>()
-  candidates.forEach((value, key) => scores.set(key, value / totalNotional))
-  return scores
-}
-
-export function scoreAndRankGenericInverted (candidates: Map<string, number>): Map<string, number> {
-  const keysSortedByValue: string[] = []
-  const valuesSorted: number[] = []
-  candidates.forEach((v, k) => {
-    keysSortedByValue.push(k)
-    valuesSorted.push(v)
-  })
-  keysSortedByValue.sort((a, b) => (candidates.get(a) ?? 0) - (candidates.get(b) ?? 0))
-  valuesSorted.sort((a, b) => a - b)
-
-  const invertedCandidates = new Map<string, number>()
-  keysSortedByValue.forEach(
-    (key, index) => invertedCandidates.set(key, valuesSorted[valuesSorted.length - index - 1])
-  )
-  return scoreAndRankGeneric(invertedCandidates)
-}
-
-function totalNotionalOf (candidates: Map<string, number>): number {
-  let totalNotional = 0
-  for (const entry of candidates.values()) {
-    totalNotional += entry
-  }
-  return totalNotional
-}
