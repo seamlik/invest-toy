@@ -1,9 +1,4 @@
-# Simple task runner based in PowerShell.
-#
-# This script is similar to a Makefile with which I can run frequently used commands. However,
-# Makefile and Bash is not officially (or even possibly) available in Windows, so we should turn to
-# tools that are more modern and cross-platform. Google's Ninja was my first choice, but sadly its
-# rules does not allow running multiple commands.
+. "$PSScriptRoot/task/util.ps1"
 
 function Format-PowerShell {
     param (
@@ -36,6 +31,9 @@ switch ($args[0]) {
 
         npx jest
         StopIfLastCommandFailed
+    }
+    cov {
+        pwsh task/cov.ps1
     }
     default {
         throw "Unknown task"
