@@ -10,6 +10,9 @@ function Format-All {
     prettier --write --ignore-path .gitignore **/*.json **/*.yaml
     StopIfLastCommandFailed
 
+    cargo fmt
+    StopIfLastCommandFailed
+
     eslint --fix cli/
     StopIfLastCommandFailed
 }
