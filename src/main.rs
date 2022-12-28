@@ -1,5 +1,5 @@
-mod notional_ranker;
+mod ranker;
 
 fn main() {
-    println!("Hello, world!");
+    ranker::StockRanker::default().rank(&Default::default());
 }

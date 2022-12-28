@@ -1,11 +1,13 @@
-use derive_more::From;
+use super::Name;
+use super::Notional;
+use super::Score;
 use std::collections::HashMap;
-use std::rc::Rc;
 
+#[derive(Default)]
 pub struct NotionalRanker;
 
 impl NotionalRanker {
-    pub fn rank(candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
+    pub fn rank(&self, candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
         let total_notional = candidates
             .values()
             .map(|x| x.value)
@@ -17,7 +19,7 @@ impl NotionalRanker {
             .collect()
     }
 
-    pub fn rank_reversed(candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
+    pub fn rank_reversed(&self, candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
         let mut names_sorted_by_notional: Vec<_> = candidates.keys().cloned().collect();
         names_sorted_by_notional.sort_unstable_by(|x, y| {
             let x_value = candidates.get(x).map_or(0.0, |notional| notional.value);
@@ -26,21 +28,15 @@ impl NotionalRanker {
         });
 
         let mut notional_sorted_reversed: Vec<_> = candidates.values().cloned().collect();
-        notional_sorted_reversed.sort_unstable_by(|x, y| x.value.total_cmp(&y.value));
-        notional_sorted_reversed.reverse();
+        notional_sorted_reversed.sort_unstable_by(|x, y| y.value.total_cmp(&x.value));
 
         let candidates_reversed: HashMap<_, _> = names_sorted_by_notional
             .iter()
             .cloned()
             .zip(notional_sorted_reversed.iter().cloned())
             .collect();
-        Self::rank(&candidates_reversed)
+        self.rank(&candidates_reversed)
     }
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Name {
-    value: Rc<str>,
 }
 
 impl From<&str> for Name {
@@ -49,16 +45,6 @@ impl From<&str> for Name {
             value: value.into(),
         }
     }
-}
-
-#[derive(Clone, Copy, From)]
-pub struct Notional {
-    value: f64,
-}
-
-#[derive(Debug, From, PartialEq)]
-pub struct Score {
-    value: f64,
 }
 
 #[cfg(test)]
@@ -84,7 +70,7 @@ mod test {
         .into();
 
         // When
-        let actual_sores = NotionalRanker::rank(&candidates);
+        let actual_sores = NotionalRanker.rank(&candidates);
 
         // Then
         assert_eq!(expected_scores, actual_sores);
@@ -109,7 +95,7 @@ mod test {
         .into();
 
         // When
-        let actual_sores = NotionalRanker::rank_reversed(&candidates);
+        let actual_sores = NotionalRanker.rank_reversed(&candidates);
 
         // Then
         assert_eq!(expected_scores, actual_sores);
