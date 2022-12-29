@@ -6,6 +6,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct NotionalRanker;
 
+#[mockall::automock]
 impl NotionalRanker {
     pub fn rank(&self, candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
         let total_notional = candidates
@@ -54,14 +55,14 @@ mod test {
     #[test]
     fn rank() {
         // Given
-        let candidates: HashMap<Name, Notional> = [
+        let candidates: HashMap<_, _> = [
             ("A".into(), 1.0.into()),
             ("B".into(), 2.0.into()),
             ("C".into(), 3.0.into()),
             ("D".into(), 4.0.into()),
         ]
         .into();
-        let expected_scores: HashMap<Name, Score> = [
+        let expected_scores: HashMap<_, _> = [
             ("A".into(), 0.1.into()),
             ("B".into(), 0.2.into()),
             ("C".into(), 0.3.into()),
@@ -79,14 +80,14 @@ mod test {
     #[test]
     fn rank_reversed() {
         // Given
-        let candidates: HashMap<Name, Notional> = [
+        let candidates: HashMap<_, _> = [
             ("A".into(), 1.0.into()),
             ("B".into(), 2.0.into()),
             ("C".into(), 3.0.into()),
             ("D".into(), 4.0.into()),
         ]
         .into();
-        let expected_scores: HashMap<Name, Score> = [
+        let expected_scores: HashMap<_, _> = [
             ("A".into(), 0.4.into()),
             ("B".into(), 0.3.into()),
             ("C".into(), 0.2.into()),
@@ -96,6 +97,19 @@ mod test {
 
         // When
         let actual_sores = NotionalRanker.rank_reversed(&candidates);
+
+        // Then
+        assert_eq!(expected_scores, actual_sores);
+    }
+
+    #[test]
+    fn rank_empty() {
+        // Given
+        let candidates = HashMap::default();
+        let expected_scores = HashMap::default();
+
+        // When
+        let actual_sores = NotionalRanker.rank(&candidates);
 
         // Then
         assert_eq!(expected_scores, actual_sores);
