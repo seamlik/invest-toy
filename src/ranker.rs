@@ -7,6 +7,7 @@ use self::long_term_change_ranker::LongTermChangeRanker;
 use self::pe_ratio_ranker::PeRatioRanker;
 use self::short_term_change_ranker::ShortTermChangeRanker;
 use derive_more::Add;
+use derive_more::Display;
 use derive_more::From;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -20,9 +21,9 @@ impl Default for StockRanker {
     fn default() -> Self {
         Self {
             rankers: vec![
-                Box::new(LongTermChangeRanker::default()),
-                Box::new(PeRatioRanker::default()),
-                Box::new(ShortTermChangeRanker::default()),
+                Box::<LongTermChangeRanker>::default(),
+                Box::<PeRatioRanker>::default(),
+                Box::<ShortTermChangeRanker>::default(),
             ],
         }
     }
@@ -32,8 +33,7 @@ impl StockRanker {
     pub fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score> {
         self.rankers
             .iter()
-            .map(|ranker| ranker.rank(candidates))
-            .flat_map(IntoIterator::into_iter)
+            .flat_map(|ranker| ranker.rank(candidates))
             .into_grouping_map()
             .sum()
     }
@@ -44,21 +44,21 @@ trait FactorRanker {
     fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score>;
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Display)]
 pub struct Name {
     value: Rc<str>,
 }
 
 #[derive(Clone, Copy, From, PartialEq)]
 pub struct Notional {
-    value: f64,
+    pub value: f64,
 }
 
 impl Eq for Notional {}
 
-#[derive(Debug, From, PartialEq, Add, Clone, Copy)]
+#[derive(Debug, From, PartialEq, Add, Clone, Copy, Default)]
 pub struct Score {
-    value: f64,
+    pub value: f64,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy)]
