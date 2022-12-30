@@ -49,6 +49,20 @@ trait FactorRanker {
 pub struct Name {
     value: Rc<str>,
 }
+impl From<&str> for Name {
+    fn from(value: &str) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+}
+impl From<String> for Name {
+    fn from(value: String) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+}
 
 #[derive(Clone, Copy, From, PartialEq)]
 pub struct Notional {

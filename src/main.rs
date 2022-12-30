@@ -1,11 +1,10 @@
 mod config;
 mod ranker;
 mod report;
+mod toy;
 
 use crate::config::Config;
-use crate::ranker::StockCandidates;
-use crate::ranker::StockRanker;
-use crate::report::ReportRenderer;
+use crate::toy::Toy;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -18,13 +17,7 @@ async fn main() -> anyhow::Result<()> {
     } else {
         Default::default()
     };
-
-    // Dummy code to avoid unreachable warnings
-    println!("{:?}", config);
-    let candidates = StockCandidates::default();
-    let scores = StockRanker::default().rank(&candidates);
-    let report = ReportRenderer::render(&candidates, &scores);
-    println!("{}", serde_json::to_string(&report)?);
+    Toy::new(config).run().await?;
     Ok(())
 }
 

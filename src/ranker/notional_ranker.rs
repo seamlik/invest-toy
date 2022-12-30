@@ -40,14 +40,6 @@ impl NotionalRanker {
     }
 }
 
-impl From<&str> for Name {
-    fn from(value: &str) -> Self {
-        Self {
-            value: value.into(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
