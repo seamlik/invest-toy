@@ -10,6 +10,7 @@ use derive_more::Add;
 use derive_more::Display;
 use derive_more::From;
 use itertools::Itertools;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -61,7 +62,7 @@ pub struct Score {
     pub value: f64,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug, Deserialize)]
 pub enum ScoringFactor {
     /// Price over earnings.
     PeRatio,
