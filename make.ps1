@@ -6,12 +6,10 @@ switch ($args[0]) {
         Format-All
     }
     run {
-        node --loader ts-node/esm cli/src/main.ts
+        cargo run
+        StopIfLastCommandFailed
     }
     check {
-        npx tsc --noEmit
-        StopIfLastCommandFailed
-
         cargo test
         StopIfLastCommandFailed
     }

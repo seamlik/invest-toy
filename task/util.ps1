@@ -12,9 +12,6 @@ function Format-All {
 
     cargo fmt
     StopIfLastCommandFailed
-
-    eslint --fix cli/
-    StopIfLastCommandFailed
 }
 
 function Format-All-PowerShell {

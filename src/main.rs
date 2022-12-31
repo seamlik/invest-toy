@@ -1,6 +1,7 @@
 mod config;
 mod ranker;
 mod report;
+mod table;
 mod toy;
 
 use crate::config::Config;

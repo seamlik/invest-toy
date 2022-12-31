@@ -5,6 +5,7 @@ use crate::ranker::ScoringFactor;
 use crate::ranker::StockCandidates;
 use crate::ranker::StockRanker;
 use crate::report::ReportRenderer;
+use crate::table::TablePrinter;
 use anyhow::Context;
 use itertools::Itertools;
 use reqwest::Client;
@@ -18,6 +19,7 @@ const LONG_TERM_YEARS: usize = 6;
 pub struct Toy {
     config: Config,
     ranker: StockRanker,
+    table_printer: TablePrinter,
 }
 
 impl Toy {
@@ -25,6 +27,7 @@ impl Toy {
         Self {
             config,
             ranker: Default::default(),
+            table_printer: TablePrinter,
         }
     }
 
@@ -72,7 +75,7 @@ impl Toy {
 
         let scores = self.ranker.rank(&candidates);
         let report = ReportRenderer::render(&candidates, &scores);
-        println!("{}", serde_json::to_string(&report)?);
+        self.table_printer.print(&report).await?;
 
         Ok(())
     }
