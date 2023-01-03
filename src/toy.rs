@@ -20,6 +20,7 @@ pub struct Toy {
     config: Config,
     ranker: StockRanker,
     table_printer: TablePrinter,
+    report_renderer: ReportRenderer,
 }
 
 impl Toy {
@@ -28,6 +29,7 @@ impl Toy {
             config,
             ranker: Default::default(),
             table_printer: TablePrinter,
+            report_renderer: ReportRenderer,
         }
     }
 
@@ -74,7 +76,7 @@ impl Toy {
         }
 
         let scores = self.ranker.rank(&candidates);
-        let report = ReportRenderer::render(&candidates, &scores);
+        let report = self.report_renderer.render(&candidates, &scores);
         self.table_printer.print(&report).await?;
 
         Ok(())

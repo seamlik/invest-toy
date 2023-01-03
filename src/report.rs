@@ -10,7 +10,11 @@ use std::collections::HashMap;
 pub struct ReportRenderer;
 
 impl ReportRenderer {
-    pub fn render(candidates: &StockCandidates, scores: &HashMap<Name, Score>) -> Vec<ReportEntry> {
+    pub fn render(
+        &self,
+        candidates: &StockCandidates,
+        scores: &HashMap<Name, Score>,
+    ) -> Vec<ReportEntry> {
         candidates
             .iter()
             .map(|(ticker, factors)| {
@@ -21,29 +25,29 @@ impl ReportRenderer {
                 )
             })
             .sorted_unstable_by(|(_, _, x), (_, _, y)| y.total_cmp(x))
-            .map(|(ticker, factors, score)| Self::render_entry(ticker, factors, score))
+            .map(|(ticker, factors, score)| render_entry(ticker, factors, score))
             .collect()
     }
+}
 
-    fn render_entry(
-        ticker: String,
-        factors: &HashMap<ScoringFactor, Notional>,
-        score: f64,
-    ) -> ReportEntry {
-        let none = "None".to_string();
-        ReportEntry {
-            ticker,
-            score: render_score(score),
-            pe_ratio: factors
-                .get(&ScoringFactor::PeRatio)
-                .map_or_else(|| none.clone(), |notional| render_float(notional.value)),
-            short_term_change: factors
-                .get(&ScoringFactor::ShortTermChange)
-                .map_or_else(|| none.clone(), render_change),
-            long_term_change: factors
-                .get(&ScoringFactor::LongTermChange)
-                .map_or_else(|| none.clone(), render_change),
-        }
+fn render_entry(
+    ticker: String,
+    factors: &HashMap<ScoringFactor, Notional>,
+    score: f64,
+) -> ReportEntry {
+    let none = "None".to_string();
+    ReportEntry {
+        ticker,
+        score: render_score(score),
+        pe_ratio: factors
+            .get(&ScoringFactor::PeRatio)
+            .map_or_else(|| none.clone(), |notional| render_float(notional.value)),
+        short_term_change: factors
+            .get(&ScoringFactor::ShortTermChange)
+            .map_or_else(|| none.clone(), render_change),
+        long_term_change: factors
+            .get(&ScoringFactor::LongTermChange)
+            .map_or_else(|| none.clone(), render_change),
     }
 }
 
@@ -78,6 +82,7 @@ mod test {
     #[test]
     fn entries_sorted_descendingly() {
         // Given
+        let service = ReportRenderer;
         let candidates: StockCandidates = [
             ("A".into(), HashMap::default()),
             ("B".into(), HashMap::default()),
@@ -87,7 +92,7 @@ mod test {
         let expected_tickers = vec!["B".to_string(), "A".to_string()];
 
         // When
-        let actual_report = ReportRenderer::render(&candidates, &scores);
+        let actual_report = service.render(&candidates, &scores);
         let actual_tickers: Vec<_> = actual_report
             .into_iter()
             .map(|entry| entry.ticker)
