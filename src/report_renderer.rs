@@ -1,8 +1,8 @@
-use crate::ranker::Name;
-use crate::ranker::Notional;
-use crate::ranker::Score;
-use crate::ranker::ScoringFactor;
-use crate::ranker::StockCandidates;
+use crate::stock_ranker::Name;
+use crate::stock_ranker::Notional;
+use crate::stock_ranker::Score;
+use crate::stock_ranker::ScoringFactor;
+use crate::stock_ranker::StockCandidates;
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;

@@ -32,7 +32,7 @@ impl FactorRanker for ShortTermChangeRanker {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ranker::Notional;
+    use crate::stock_ranker::Notional;
 
     #[test]
     fn rank_correct_candidates() {

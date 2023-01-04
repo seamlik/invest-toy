@@ -1,4 +1,4 @@
-use crate::ranker::ScoringFactor;
+use crate::stock_ranker::ScoringFactor;
 use serde::Deserialize;
 use std::collections::HashMap;
 

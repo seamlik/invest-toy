@@ -9,30 +9,30 @@ use std::collections::HashMap;
 use super::notional_ranker::NotionalRanker;
 
 #[derive(Default)]
-pub struct LongTermChangeRanker {
+pub struct PeRatioRanker {
     notional_ranker: NotionalRanker,
 }
 
-impl FactorRanker for LongTermChangeRanker {
+impl FactorRanker for PeRatioRanker {
     fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
             .filter_map(|(name, factors)| {
                 factors
-                    .get(&ScoringFactor::LongTermChange)
+                    .get(&ScoringFactor::PeRatio)
                     .filter(|notional| notional.value > 0.0)
                     .cloned()
                     .map(|notional| (name.clone(), notional))
             })
             .collect();
-        self.notional_ranker.rank(&notional_candidates)
+        self.notional_ranker.rank_reversed(&notional_candidates)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ranker::Notional;
+    use crate::stock_ranker::Notional;
 
     #[test]
     fn rank_correct_candidates() {
@@ -40,7 +40,7 @@ mod test {
         let stock_candidates: StockCandidates = [
             (
                 "A".into(),
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::PeRatio, Notional::from(1.0))]),
             ),
             (
                 "B".into(),
@@ -48,11 +48,11 @@ mod test {
             ),
             (
                 "C".into(),
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(-1.0))]),
+                HashMap::from([(ScoringFactor::PeRatio, Notional::from(-1.0))]),
             ),
             (
                 "D".into(),
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(0.0))]),
+                HashMap::from([(ScoringFactor::PeRatio, Notional::from(0.0))]),
             ),
         ]
         .into();
@@ -60,10 +60,10 @@ mod test {
         let dummy_scores = HashMap::default();
         let mut notional_ranker = NotionalRanker::default();
         notional_ranker
-            .expect_rank()
+            .expect_rank_reversed()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = LongTermChangeRanker { notional_ranker };
+        let service = PeRatioRanker { notional_ranker };
 
         // When
         let actual_scores = service.rank(&stock_candidates);
@@ -80,10 +80,10 @@ mod test {
         let dummy_scores = HashMap::default();
         let mut notional_ranker = NotionalRanker::default();
         notional_ranker
-            .expect_rank()
+            .expect_rank_reversed()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = LongTermChangeRanker { notional_ranker };
+        let service = PeRatioRanker { notional_ranker };
 
         // When
         let actual_scores = service.rank(&stock_candidates);

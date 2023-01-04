@@ -1,8 +1,8 @@
 mod config;
-mod ibkr;
-mod ranker;
-mod report;
-mod table;
+mod ibkr_client;
+mod report_renderer;
+mod stock_ranker;
+mod table_printer;
 mod toy;
 
 use crate::config::Config;

@@ -1,14 +1,14 @@
 use crate::config::Config;
-use crate::ibkr::HistoricalMarketDataEntry;
-use crate::ibkr::IbkrClient;
-use crate::ibkr::PortfolioPosition;
-use crate::ranker::Name;
-use crate::ranker::Notional;
-use crate::ranker::ScoringFactor;
-use crate::ranker::StockCandidates;
-use crate::ranker::StockRanker;
-use crate::report::ReportRenderer;
-use crate::table::TablePrinter;
+use crate::ibkr_client::HistoricalMarketDataEntry;
+use crate::ibkr_client::IbkrClient;
+use crate::ibkr_client::PortfolioPosition;
+use crate::report_renderer::ReportRenderer;
+use crate::stock_ranker::Name;
+use crate::stock_ranker::Notional;
+use crate::stock_ranker::ScoringFactor;
+use crate::stock_ranker::StockCandidates;
+use crate::stock_ranker::StockRanker;
+use crate::table_printer::TablePrinter;
 use anyhow::Context;
 use std::collections::HashMap;
 
