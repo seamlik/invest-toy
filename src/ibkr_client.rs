@@ -4,6 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct IbkrClient;
 
 impl IbkrClient {
@@ -38,37 +39,18 @@ impl IbkrClient {
         fetch(&endpoint).await
     }
 
-    pub async fn long_term_market_history(
-        &self,
-        conid: i32,
-        period_years: usize,
-    ) -> reqwest::Result<Vec<HistoricalMarketDataEntry>> {
-        let result = self
-            .market_history(conid, &format!("{}y", period_years), "1m")
-            .await?
-            .data;
-        Ok(result)
-    }
-
-    pub async fn short_term_market_history(
-        &self,
-        conid: i32,
-    ) -> reqwest::Result<Vec<HistoricalMarketDataEntry>> {
-        let result = self.market_history(conid, "2m", "1d").await?.data;
-        Ok(result)
-    }
-
-    async fn market_history(
+    pub async fn market_history(
         &self,
         conid: i32,
         chart_period: &str,
         chart_bar: &str,
-    ) -> reqwest::Result<HistoricalMarketData> {
+    ) -> reqwest::Result<Vec<HistoricalMarketDataEntry>> {
         let endpoint = format!(
             "iserver/marketdata/history?conid={}&period={}&bar={}&outsideRth=false",
             conid, chart_period, chart_bar
         );
-        fetch(&endpoint).await
+        let market_history: HistoricalMarketData = fetch(&endpoint).await?;
+        Ok(market_history.data)
     }
 }
 
@@ -116,9 +98,9 @@ pub struct HistoricalMarketData {
 
 #[derive(Deserialize)]
 pub struct HistoricalMarketDataEntry {
-    ///Price at market close
+    /// Price at market close
     pub c: f64,
 
-    ///Timestamp
+    /// Timestamp
     pub t: i64,
 }

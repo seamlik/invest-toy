@@ -6,6 +6,7 @@ mod short_term_change_ranker;
 use self::long_term_change_ranker::LongTermChangeRanker;
 use self::pe_ratio_ranker::PeRatioRanker;
 use self::short_term_change_ranker::ShortTermChangeRanker;
+use crate::stock_candidates::StockCandidates;
 use derive_more::Add;
 use derive_more::Display;
 use derive_more::From;
@@ -87,8 +88,6 @@ pub enum ScoringFactor {
     /// Change of the stock price in the short term.
     ShortTermChange,
 }
-
-pub type StockCandidates = HashMap<Name, HashMap<ScoringFactor, Notional>>;
 
 #[cfg(test)]
 mod test {

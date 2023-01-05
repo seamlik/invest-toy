@@ -39,19 +39,19 @@ mod test {
         // Given
         let stock_candidates: StockCandidates = [
             (
-                "A".into(),
+                "A",
                 HashMap::from([(ScoringFactor::ShortTermChange, Notional::from(-1.0))]),
             ),
             (
-                "B".into(),
+                "B",
                 HashMap::from([(ScoringFactor::LongTermChange, Notional::from(-1.0))]),
             ),
             (
-                "C".into(),
+                "C",
                 HashMap::from([(ScoringFactor::ShortTermChange, Notional::from(1.0))]),
             ),
             (
-                "D".into(),
+                "D",
                 HashMap::from([(ScoringFactor::ShortTermChange, Notional::from(0.0))]),
             ),
         ]

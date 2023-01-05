@@ -1,8 +1,8 @@
+use crate::stock_candidates::StockCandidates;
 use crate::stock_ranker::Name;
 use crate::stock_ranker::Notional;
 use crate::stock_ranker::Score;
 use crate::stock_ranker::ScoringFactor;
-use crate::stock_ranker::StockCandidates;
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -83,11 +83,8 @@ mod test {
     fn entries_sorted_descendingly() {
         // Given
         let service = ReportRenderer;
-        let candidates: StockCandidates = [
-            ("A".into(), HashMap::default()),
-            ("B".into(), HashMap::default()),
-        ]
-        .into();
+        let candidates: StockCandidates =
+            [("A", Default::default()), ("B", Default::default())].into();
         let scores: HashMap<_, _> = [("A".into(), 1.0.into()), ("B".into(), 2.0.into())].into();
         let expected_tickers = vec!["B".to_string(), "A".to_string()];
 
