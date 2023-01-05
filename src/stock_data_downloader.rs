@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::ibkr_client::IbkrClient;
 use crate::ibkr_client::PortfolioPosition;
@@ -14,7 +15,33 @@ pub struct StockDataDownloader {
 }
 
 impl StockDataDownloader {
-    pub async fn download_long_term_market_history(
+    pub async fn download_stock_data(
+        &self,
+        account_id: &str,
+        config: &Config,
+    ) -> anyhow::Result<StockData> {
+        let portfolio = self.download_portfolio(account_id).await?;
+        println!("Found {} stocks", portfolio.len());
+        let portfolio: Vec<_> = portfolio
+            .into_iter()
+            .filter(|position| !config.r#override.contains_key(&position.ticker))
+            .collect();
+
+        let conids: Vec<_> = portfolio.iter().map(|position| position.conid).collect();
+        let market_snapshot = self.download_market_snapshot(&conids).await?;
+        let short_term_market_history = self.download_short_term_market_history(&conids).await?;
+        let long_term_market_history = self.download_long_term_market_history(&conids).await?;
+
+        let result = StockData {
+            portfolio,
+            market_snapshot,
+            long_term_market_history,
+            short_term_market_history,
+        };
+        Ok(result)
+    }
+
+    async fn download_long_term_market_history(
         &self,
         conids: &[i32],
     ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
@@ -26,7 +53,7 @@ impl StockDataDownloader {
         Ok(result)
     }
 
-    pub async fn download_short_term_market_history(
+    async fn download_short_term_market_history(
         &self,
         conids: &[i32],
     ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
@@ -38,7 +65,7 @@ impl StockDataDownloader {
         Ok(result)
     }
 
-    pub async fn download_market_snapshot(
+    async fn download_market_snapshot(
         &self,
         conids: &[i32],
     ) -> anyhow::Result<HashMap<ContractId, MarketSnapshot>> {
@@ -56,7 +83,7 @@ impl StockDataDownloader {
         Ok(result)
     }
 
-    pub async fn download_portfolio(
+    async fn download_portfolio(
         &self,
         account_id: &str,
     ) -> reqwest::Result<Vec<PortfolioPosition>> {
@@ -90,6 +117,13 @@ impl StockDataDownloader {
 
         Ok(portfolio)
     }
+}
+
+pub struct StockData {
+    pub portfolio: Vec<PortfolioPosition>,
+    pub market_snapshot: HashMap<ContractId, MarketSnapshot>,
+    pub short_term_market_history: HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
+    pub long_term_market_history: HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
 }
 
 pub struct MarketSnapshot {

@@ -1,6 +1,7 @@
 mod config;
 mod ibkr_client;
 mod report_renderer;
+mod scoring_factor_extractor;
 mod stock_candidates;
 mod stock_data_downloader;
 mod stock_ranker;

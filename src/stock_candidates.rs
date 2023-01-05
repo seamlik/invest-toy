@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use crate::scoring_factor_extractor::ScoringFactor;
 use crate::stock_ranker::Notional;
-use crate::stock_ranker::ScoringFactor;
 use crate::stock_ranker::Ticker;
 
 #[derive(Default)]

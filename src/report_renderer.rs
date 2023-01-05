@@ -1,7 +1,7 @@
+use crate::scoring_factor_extractor::ScoringFactor;
 use crate::stock_candidates::StockCandidates;
 use crate::stock_ranker::Notional;
 use crate::stock_ranker::Score;
-use crate::stock_ranker::ScoringFactor;
 use crate::stock_ranker::Ticker;
 use itertools::Itertools;
 use serde::Serialize;

@@ -1,8 +1,8 @@
 use super::FactorRanker;
 use super::Score;
-use super::ScoringFactor;
 use super::StockCandidates;
 use super::Ticker;
+use crate::scoring_factor_extractor::ScoringFactor;
 use std::collections::HashMap;
 
 #[mockall_double::double]
