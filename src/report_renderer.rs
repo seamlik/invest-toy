@@ -1,8 +1,8 @@
 use crate::stock_candidates::StockCandidates;
-use crate::stock_ranker::Name;
 use crate::stock_ranker::Notional;
 use crate::stock_ranker::Score;
 use crate::stock_ranker::ScoringFactor;
+use crate::stock_ranker::Ticker;
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ impl ReportRenderer {
     pub fn render(
         &self,
         candidates: &StockCandidates,
-        scores: &HashMap<Name, Score>,
+        scores: &HashMap<Ticker, Score>,
     ) -> Vec<ReportEntry> {
         candidates
             .iter()

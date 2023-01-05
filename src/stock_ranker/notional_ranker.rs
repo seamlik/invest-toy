@@ -1,6 +1,6 @@
-use super::Name;
 use super::Notional;
 use super::Score;
+use super::Ticker;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -8,7 +8,7 @@ pub struct NotionalRanker;
 
 #[mockall::automock]
 impl NotionalRanker {
-    pub fn rank(&self, candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
+    pub fn rank(&self, candidates: &HashMap<Ticker, Notional>) -> HashMap<Ticker, Score> {
         let total_notional = candidates
             .values()
             .map(|x| x.value)
@@ -20,7 +20,7 @@ impl NotionalRanker {
             .collect()
     }
 
-    pub fn rank_reversed(&self, candidates: &HashMap<Name, Notional>) -> HashMap<Name, Score> {
+    pub fn rank_reversed(&self, candidates: &HashMap<Ticker, Notional>) -> HashMap<Ticker, Score> {
         let mut names_sorted_by_notional: Vec<_> = candidates.keys().cloned().collect();
         names_sorted_by_notional.sort_unstable_by(|x, y| {
             let x_value = candidates.get(x).map_or(0.0, |notional| notional.value);

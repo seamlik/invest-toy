@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use crate::stock_ranker::Name;
 use crate::stock_ranker::Notional;
 use crate::stock_ranker::ScoringFactor;
+use crate::stock_ranker::Ticker;
 
 #[derive(Default)]
 pub struct StockCandidates {
-    map: HashMap<Name, HashMap<ScoringFactor, Notional>>,
+    map: HashMap<Ticker, HashMap<ScoringFactor, Notional>>,
 }
 
 impl StockCandidates {
@@ -23,7 +23,12 @@ impl StockCandidates {
         Self { map }
     }
 
-    pub fn add_candidate(&mut self, ticker: Name, factor_type: ScoringFactor, notional: Notional) {
+    pub fn add_candidate(
+        &mut self,
+        ticker: Ticker,
+        factor_type: ScoringFactor,
+        notional: Notional,
+    ) {
         if let Some(factors) = self.map.get_mut(&ticker) {
             factors.insert(factor_type, notional);
         } else {
@@ -32,7 +37,7 @@ impl StockCandidates {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Name, &HashMap<ScoringFactor, Notional>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Ticker, &HashMap<ScoringFactor, Notional>)> {
         self.map.iter()
     }
 }

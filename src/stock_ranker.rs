@@ -32,7 +32,7 @@ impl Default for StockRanker {
 }
 
 impl StockRanker {
-    pub fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score> {
+    pub fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
         self.rankers
             .iter()
             .flat_map(|ranker| ranker.rank(candidates))
@@ -43,21 +43,22 @@ impl StockRanker {
 
 #[mockall::automock]
 trait FactorRanker {
-    fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score>;
+    fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score>;
 }
 
+/// Code name of a stock.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Display)]
-pub struct Name {
+pub struct Ticker {
     value: Rc<str>,
 }
-impl From<&str> for Name {
+impl From<&str> for Ticker {
     fn from(value: &str) -> Self {
         Self {
             value: value.into(),
         }
     }
 }
-impl From<String> for Name {
+impl From<String> for Ticker {
     fn from(value: String) -> Self {
         Self {
             value: value.into(),

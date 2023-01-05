@@ -8,9 +8,9 @@ use crate::stock_candidates::StockCandidates;
 use crate::stock_data_downloader::ContractId;
 use crate::stock_data_downloader::MarketSnapshot;
 use crate::stock_data_downloader::StockDataDownloader;
-use crate::stock_ranker::Name;
 use crate::stock_ranker::ScoringFactor;
 use crate::stock_ranker::StockRanker;
+use crate::stock_ranker::Ticker;
 use crate::table_printer::TablePrinter;
 use std::collections::HashMap;
 
@@ -79,7 +79,7 @@ impl Toy {
 
         for position in portfolio {
             let conid = position.conid.into();
-            let ticker: Name = position.ticker.into();
+            let ticker: Ticker = position.ticker.into();
 
             // Extract P/E
             if let Some(notional) = market_snapshot

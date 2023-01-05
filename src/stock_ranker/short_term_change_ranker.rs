@@ -1,8 +1,8 @@
 use super::FactorRanker;
-use super::Name;
 use super::Score;
 use super::ScoringFactor;
 use super::StockCandidates;
+use super::Ticker;
 use std::collections::HashMap;
 
 #[mockall_double::double]
@@ -14,7 +14,7 @@ pub struct ShortTermChangeRanker {
 }
 
 impl FactorRanker for ShortTermChangeRanker {
-    fn rank(&self, candidates: &StockCandidates) -> HashMap<Name, Score> {
+    fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
             .filter_map(|(name, factors)| {
