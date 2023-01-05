@@ -7,9 +7,6 @@ function StopIfLastCommandFailed {
 function Format-All {
     Format-All-PowerShell
 
-    prettier --write --ignore-path .gitignore **/*.json **/*.yaml
-    StopIfLastCommandFailed
-
     cargo fmt
     StopIfLastCommandFailed
 }
