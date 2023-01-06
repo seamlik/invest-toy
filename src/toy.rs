@@ -11,7 +11,6 @@ use std::rc::Rc;
 
 pub struct Toy {
     args: Cli,
-    config: Rc<Config>,
     ranker: StockRanker,
     table_printer: TablePrinter,
     report_renderer: ReportRenderer,
@@ -24,13 +23,12 @@ impl Toy {
     pub fn new(args: Cli, config: Rc<Config>) -> Self {
         Self {
             args,
-            config: config.clone(),
             ranker: Default::default(),
             table_printer: TablePrinter,
             report_renderer: ReportRenderer,
             ibkr_client: Default::default(),
-            stock_data_cacher: StockDataCacher::new(config),
-            scoring_factor_extractor: Default::default(),
+            stock_data_cacher: StockDataCacher::new(config.clone()),
+            scoring_factor_extractor: ScoringFactorExtractor::new(config),
         }
     }
 
@@ -55,7 +53,7 @@ impl Toy {
             .await?;
         let candidates = self
             .scoring_factor_extractor
-            .extract_scoring_factors(&self.config, &stock_data);
+            .extract_scoring_factors(&stock_data);
         let scores = self.ranker.rank(&candidates);
         let report = self.report_renderer.render(&candidates, &scores);
         self.table_printer.print(&report).await?;

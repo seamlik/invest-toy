@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::stock_candidates::StockCandidates;
@@ -9,17 +7,20 @@ use crate::stock_data_downloader::StockData;
 use crate::stock_ranker::Ticker;
 use chrono::Utc;
 use serde::Deserialize;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-#[derive(Default)]
-pub struct ScoringFactorExtractor;
+pub struct ScoringFactorExtractor {
+    config: Rc<Config>,
+}
 
 impl ScoringFactorExtractor {
-    pub fn extract_scoring_factors(
-        &self,
-        config: &Config,
-        stock_data: &StockData,
-    ) -> StockCandidates {
-        let mut candidates = StockCandidates::from_config_overrides(&config.r#override);
+    pub fn new(config: Rc<Config>) -> Self {
+        Self { config }
+    }
+
+    pub fn extract_scoring_factors(&self, stock_data: &StockData) -> StockCandidates {
+        let mut candidates = StockCandidates::from_config_overrides(&self.config.r#override);
         for position in &stock_data.portfolio {
             let conid = position.conid.into();
             let ticker: Ticker = position.ticker.as_str().into();

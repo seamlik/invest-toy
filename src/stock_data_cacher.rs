@@ -9,7 +9,6 @@ use std::rc::Rc;
 pub struct StockDataCacher {
     downloader: StockDataDownloader,
     cache_path: PathBuf,
-    config: Rc<Config>,
 }
 
 impl StockDataCacher {
@@ -17,9 +16,8 @@ impl StockDataCacher {
         let mut cache_path = std::env::temp_dir();
         cache_path.push("ibkr-toy-cache.bson");
         Self {
-            downloader: Default::default(),
+            downloader: StockDataDownloader::new(config),
             cache_path,
-            config,
         }
     }
 
@@ -37,10 +35,7 @@ impl StockDataCacher {
         }
 
         println!("Downloading stock data from IBKR");
-        let stock_data = self
-            .downloader
-            .download_stock_data(account_id, &self.config)
-            .await?;
+        let stock_data = self.downloader.download_stock_data(account_id).await?;
 
         let stock_data_bson = bson::to_vec(&stock_data)?;
         if let Err(e) = tokio::fs::write(&self.cache_path, stock_data_bson).await {

@@ -9,26 +9,30 @@ use derive_more::From;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 const FIELD_ID_LAST_PRICE: i32 = 31;
 const FIELD_ID_PE_RATIO: i32 = 7290;
 
-#[derive(Default)]
 pub struct StockDataDownloader {
+    config: Rc<Config>,
     ibkr_client: IbkrClient,
 }
 
 impl StockDataDownloader {
-    pub async fn download_stock_data(
-        &self,
-        account_id: &str,
-        config: &Config,
-    ) -> anyhow::Result<StockData> {
+    pub fn new(config: Rc<Config>) -> Self {
+        Self {
+            config,
+            ibkr_client: Default::default(),
+        }
+    }
+
+    pub async fn download_stock_data(&self, account_id: &str) -> anyhow::Result<StockData> {
         let portfolio = self.download_portfolio(account_id).await?;
         println!("Found {} stocks", portfolio.len());
         let portfolio: Vec<_> = portfolio
             .into_iter()
-            .filter(|position| !config.r#override.contains_key(&position.ticker))
+            .filter(|position| !self.config.r#override.contains_key(&position.ticker))
             .collect();
 
         let timestamp = Utc::now();
