@@ -2,29 +2,34 @@ use crate::config::Config;
 use crate::ibkr_client::IbkrClient;
 use crate::report_renderer::ReportRenderer;
 use crate::scoring_factor_extractor::ScoringFactorExtractor;
-use crate::stock_data_downloader::StockDataDownloader;
+use crate::stock_data_cacher::StockDataCacher;
 use crate::stock_ranker::StockRanker;
 use crate::table_printer::TablePrinter;
+use clap::Parser;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 pub struct Toy {
-    config: Config,
+    args: Cli,
+    config: Rc<Config>,
     ranker: StockRanker,
     table_printer: TablePrinter,
     report_renderer: ReportRenderer,
     ibkr_client: IbkrClient,
-    stock_data_downloader: StockDataDownloader,
+    stock_data_cacher: StockDataCacher,
     scoring_factor_extractor: ScoringFactorExtractor,
 }
 
 impl Toy {
-    pub fn new(config: Config) -> Self {
+    pub fn new(args: Cli, config: Rc<Config>) -> Self {
         Self {
-            config,
+            args,
+            config: config.clone(),
             ranker: Default::default(),
             table_printer: TablePrinter,
             report_renderer: ReportRenderer,
             ibkr_client: Default::default(),
-            stock_data_downloader: Default::default(),
+            stock_data_cacher: StockDataCacher::new(config),
             scoring_factor_extractor: Default::default(),
         }
     }
@@ -45,8 +50,8 @@ impl Toy {
         println!("Account ID: {}", &account_id);
 
         let stock_data = self
-            .stock_data_downloader
-            .download_stock_data(&account_id, &self.config)
+            .stock_data_cacher
+            .fetch(&account_id, self.args.force_download)
             .await?;
         let candidates = self
             .scoring_factor_extractor
@@ -57,4 +62,10 @@ impl Toy {
 
         Ok(())
     }
+}
+
+#[derive(Parser, Default)]
+pub struct Cli {
+    pub config: Option<PathBuf>,
+    pub force_download: bool,
 }

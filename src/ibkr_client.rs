@@ -2,6 +2,7 @@ use itertools::Itertools;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -82,7 +83,7 @@ pub struct PortfolioAccount {
     pub accountId: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct PortfolioPosition {
     pub conid: i32,
@@ -96,7 +97,7 @@ pub struct HistoricalMarketData {
     pub data: Vec<HistoricalMarketDataEntry>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct HistoricalMarketDataEntry {
     /// Price at market close
     pub c: f64,

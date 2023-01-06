@@ -3,7 +3,11 @@ use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::ibkr_client::IbkrClient;
 use crate::ibkr_client::PortfolioPosition;
 use anyhow::Context;
+use chrono::DateTime;
+use chrono::Utc;
 use derive_more::From;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 const FIELD_ID_LAST_PRICE: i32 = 31;
@@ -27,6 +31,7 @@ impl StockDataDownloader {
             .filter(|position| !config.r#override.contains_key(&position.ticker))
             .collect();
 
+        let timestamp = Utc::now();
         let conids: Vec<_> = portfolio.iter().map(|position| position.conid).collect();
         let market_snapshot = self.download_market_snapshot(&conids).await?;
         let short_term_market_history = self.download_short_term_market_history(&conids).await?;
@@ -37,6 +42,7 @@ impl StockDataDownloader {
             market_snapshot,
             long_term_market_history,
             short_term_market_history,
+            timestamp,
         };
         Ok(result)
     }
@@ -119,13 +125,16 @@ impl StockDataDownloader {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct StockData {
     pub portfolio: Vec<PortfolioPosition>,
     pub market_snapshot: HashMap<ContractId, MarketSnapshot>,
     pub short_term_market_history: HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
     pub long_term_market_history: HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
+    pub timestamp: DateTime<Utc>,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct MarketSnapshot {
     pub last_price: Option<f64>,
     pub pe_ratio: Option<f64>,
@@ -160,7 +169,7 @@ fn extract_last_price(data: &HashMap<String, String>) -> anyhow::Result<Option<f
         .context("Failed to parse last price")
 }
 
-#[derive(From, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct ContractId {
     value: i32,
 }
