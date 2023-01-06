@@ -97,7 +97,7 @@ pub struct HistoricalMarketData {
     pub data: Vec<HistoricalMarketDataEntry>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct HistoricalMarketDataEntry {
     /// Price at market close
     pub c: f64,

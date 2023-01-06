@@ -2,12 +2,11 @@ use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::stock_candidates::StockCandidates;
 use crate::stock_data_downloader::ContractId;
-use crate::stock_data_downloader::MarketSnapshot;
 use crate::stock_data_downloader::StockData;
 use crate::stock_ranker::Ticker;
+use chrono::DateTime;
 use chrono::Utc;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct ScoringFactorExtractor {
@@ -35,11 +34,7 @@ impl ScoringFactorExtractor {
             }
 
             // Long-term price change
-            if let Some(notional) = extract_long_term_price_change(
-                &position.conid.into(),
-                &stock_data.market_snapshot,
-                &stock_data.long_term_market_history,
-            ) {
+            if let Some(notional) = extract_long_term_price_change(conid, stock_data) {
                 candidates.add_candidate(
                     ticker.clone(),
                     ScoringFactor::LongTermChange,
@@ -48,11 +43,7 @@ impl ScoringFactorExtractor {
             }
 
             // Short-term price change
-            if let Some(notional) = extract_short_term_price_change(
-                &position.conid.into(),
-                &stock_data.market_snapshot,
-                &stock_data.short_term_market_history,
-            ) {
+            if let Some(notional) = extract_short_term_price_change(conid, stock_data) {
                 candidates.add_candidate(
                     ticker.clone(),
                     ScoringFactor::ShortTermChange,
@@ -76,47 +67,125 @@ pub enum ScoringFactor {
     ShortTermChange,
 }
 
-fn extract_long_term_price_change(
-    conid: &ContractId,
-    market_snapshot: &HashMap<ContractId, MarketSnapshot>,
-    market_history: &HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
-) -> Option<f64> {
-    let last_price = market_snapshot.get(conid)?.last_price?;
-    let oldest_market_data = market_history.get(conid)?.first()?;
-    let milliseconds_of_5_years = 1000 * 60 * 60 * 24 * 365 * 5;
+fn extract_long_term_price_change(conid: ContractId, stock_data: &StockData) -> Option<f64> {
+    let last_price = stock_data.market_snapshot.get(&conid)?.last_price?;
+    let oldest_market_data = stock_data.long_term_market_history.get(&conid)?.first()?;
+    let five_years = 1000 * 60 * 60 * 24 * 365 * 5;
     let now = Utc::now().timestamp_millis();
-    if oldest_market_data.c == 0.0 || now - oldest_market_data.t < milliseconds_of_5_years {
+    if now - oldest_market_data.t < five_years {
         None
     } else {
-        Some((last_price - oldest_market_data.c) / oldest_market_data.c)
+        price_change(oldest_market_data.c, last_price)
     }
 }
 
-fn extract_short_term_price_change(
-    conid: &ContractId,
-    market_snapshot: &HashMap<ContractId, MarketSnapshot>,
-    market_history: &HashMap<ContractId, Vec<HistoricalMarketDataEntry>>,
-) -> Option<f64> {
-    let last_price = market_snapshot.get(conid)?.last_price?;
-    let history = market_history.get(conid)?;
-    let price_on_last_month = last_month_entry_of(history)?.c;
-    if price_on_last_month == 0.0 {
+fn extract_short_term_price_change(conid: ContractId, stock_data: &StockData) -> Option<f64> {
+    let last_price = stock_data.market_snapshot.get(&conid)?.last_price?;
+    let history = stock_data.short_term_market_history.get(&conid)?;
+    let price_on_last_month = last_month_entry(history)?.c;
+    price_change(price_on_last_month, last_price)
+}
+
+fn price_change(old_price: f64, new_price: f64) -> Option<f64> {
+    if old_price == 0.0 {
         None
     } else {
-        Some((last_price - price_on_last_month) / price_on_last_month)
+        Some((new_price - old_price) / old_price)
     }
 }
 
-fn last_month_entry_of(
-    history: &[HistoricalMarketDataEntry],
-) -> Option<&HistoricalMarketDataEntry> {
-    if history.len() < 30 {
-        return None;
-    }
-    let milliseconds_of_1_month = 1000 * 60 * 60 * 24 * 30;
-    let now = Utc::now().timestamp_millis();
+fn last_month_entry(history: &[HistoricalMarketDataEntry]) -> Option<&HistoricalMarketDataEntry> {
+    let now = Utc::now();
     history
         .iter()
         .rev()
-        .find(|entry| now - entry.t >= milliseconds_of_1_month)
+        .find(|entry| within_1_month(entry.t, now))
+}
+
+fn within_1_month(timestamp: i64, now: DateTime<Utc>) -> bool {
+    let duration = now.timestamp_millis() - timestamp;
+    let one_month = 1000 * 60 * 60 * 24 * 30;
+    one_month <= duration && duration <= one_month * 2
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use chrono::Duration;
+
+    #[test]
+    fn price_change() {
+        // Positive change
+        let change = super::price_change(100.0, 200.0);
+        assert_eq!(Some(1.0), change);
+
+        // Negative change
+        let change = super::price_change(200.0, 100.0);
+        assert_eq!(Some(-0.5), change);
+
+        // Division by 0
+        let change = super::price_change(0.0, 100.0);
+        assert_eq!(None, change);
+    }
+
+    #[test]
+    fn last_month_entry() {
+        // Test case
+        let history = [
+            HistoricalMarketDataEntry {
+                c: 1.0,
+                t: (Utc::now() - Duration::days(300)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 2.0,
+                t: (Utc::now() - Duration::days(200)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 3.0,
+                t: (Utc::now() - Duration::days(100)).timestamp_millis(),
+            },
+        ];
+        let found_entry = super::last_month_entry(&history);
+        assert_eq!(None, found_entry);
+
+        // Test case
+        let history = [
+            HistoricalMarketDataEntry {
+                c: 1.0,
+                t: (Utc::now() - Duration::days(5)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 2.0,
+                t: (Utc::now() - Duration::days(4)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 3.0,
+                t: (Utc::now() - Duration::days(3)).timestamp_millis(),
+            },
+        ];
+        let found_entry = super::last_month_entry(&history);
+        assert_eq!(None, found_entry);
+
+        // Test case
+        let history = [
+            HistoricalMarketDataEntry {
+                c: 1.0,
+                t: (Utc::now() - Duration::days(100)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 2.0,
+                t: (Utc::now() - Duration::days(35)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 3.0,
+                t: (Utc::now() - Duration::days(30)).timestamp_millis(),
+            },
+            HistoricalMarketDataEntry {
+                c: 4.0,
+                t: (Utc::now() - Duration::days(10)).timestamp_millis(),
+            },
+        ];
+        let found_entry = super::last_month_entry(&history);
+        assert_eq!(3.0, found_entry.unwrap().c);
+    }
 }
