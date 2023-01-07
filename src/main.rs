@@ -13,17 +13,29 @@ mod toy;
 use crate::toy::Toy;
 use clap::Parser;
 use config::Config;
+use std::path::PathBuf;
 use toy::Cli;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
-    let config = if let Some(config_path) = &args.config {
-        let config_yaml = tokio::fs::read_to_string(config_path).await?;
-        Config::parse(&config_yaml)?
-    } else {
-        Default::default()
-    };
+
+    let default_config_path = default_config_path()?;
+    let config_path = args
+        .config
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| default_config_path);
+    let config_yaml = tokio::fs::read_to_string(config_path).await?;
+    let config = Config::parse(&config_yaml)?;
+
     Toy::new(args, config.into()).run().await?;
     Ok(())
+}
+
+fn default_config_path() -> anyhow::Result<PathBuf> {
+    let mut path =
+        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Failed to determine home directory"))?;
+    path.push("ibkr-toy.yaml");
+    Ok(path)
 }
