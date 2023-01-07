@@ -15,7 +15,7 @@ pub struct StockDataCacher {
 impl StockDataCacher {
     pub fn new(config: Rc<Config>) -> Self {
         let mut cache_path = std::env::temp_dir();
-        cache_path.push("ibkr-toy-cache.bson");
+        cache_path.push("ibkr-toy-cache.json");
         Self {
             downloader: StockDataDownloader::new(config),
             cache_path,
@@ -42,9 +42,9 @@ impl StockDataCacher {
             .await
             .context("Failed to download stock data")?;
 
-        let stock_data_bson =
-            bson::to_vec(&stock_data).context("Failed to serialize stock data to BSON")?;
-        tokio::fs::write(&self.cache_path, stock_data_bson)
+        let stock_data_serialized =
+            serde_json::to_string(&stock_data).context("Failed to serialize stock data to JSON")?;
+        tokio::fs::write(&self.cache_path, stock_data_serialized)
             .await
             .context("Failed to write cache")?;
 
@@ -52,8 +52,8 @@ impl StockDataCacher {
     }
 
     async fn read_cache(&self) -> anyhow::Result<StockData> {
-        let cache_bytes = tokio::fs::read(&self.cache_path).await?;
-        let stock_data = bson::from_slice(&cache_bytes)?;
+        let cache = tokio::fs::read_to_string(&self.cache_path).await?;
+        let stock_data = serde_json::from_str(&cache)?;
         Ok(stock_data)
     }
 }
