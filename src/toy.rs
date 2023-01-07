@@ -50,7 +50,7 @@ impl Toy {
 
         let stock_data = self
             .stock_data_cacher
-            .fetch(&account_id, self.args.force_download.unwrap_or(false))
+            .fetch(&account_id, self.args.force_download)
             .await
             .context("Failed to fetch stock data")?;
         let candidates = self
@@ -66,6 +66,9 @@ impl Toy {
 
 #[derive(Parser)]
 pub struct Cli {
+    #[arg(long)]
     pub config: Option<PathBuf>,
-    pub force_download: Option<bool>,
+
+    #[arg(long)]
+    pub force_download: bool,
 }
