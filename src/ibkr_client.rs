@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -14,7 +15,7 @@ impl IbkrClient {
         &self,
         conids: &[i32],
         fields: &[i32],
-    ) -> reqwest::Result<Vec<HashMap<String, String>>> {
+    ) -> anyhow::Result<Vec<HashMap<String, Value>>> {
         let conids_text = conids.iter().join(",");
         let fields_text = fields.iter().join(",");
         let endpoint = format!(
@@ -24,11 +25,11 @@ impl IbkrClient {
         fetch(&endpoint).await
     }
 
-    pub async fn i_server_accounts(&self) -> reqwest::Result<IServerAccount> {
+    pub async fn i_server_accounts(&self) -> anyhow::Result<IServerAccount> {
         fetch("iserver/accounts").await
     }
 
-    pub async fn portfolio_accounts(&self) -> reqwest::Result<Vec<PortfolioAccount>> {
+    pub async fn portfolio_accounts(&self) -> anyhow::Result<Vec<PortfolioAccount>> {
         fetch("portfolio/accounts").await
     }
 
@@ -36,7 +37,7 @@ impl IbkrClient {
         &self,
         account_id: &str,
         page_index: usize,
-    ) -> reqwest::Result<Vec<PortfolioPosition>> {
+    ) -> anyhow::Result<Vec<PortfolioPosition>> {
         let endpoint = format!("portfolio/{}/positions/{}", account_id, page_index);
         fetch(&endpoint).await
     }
@@ -46,7 +47,7 @@ impl IbkrClient {
         conid: i32,
         chart_period: &str,
         chart_bar: &str,
-    ) -> reqwest::Result<Vec<HistoricalMarketDataEntry>> {
+    ) -> anyhow::Result<Vec<HistoricalMarketDataEntry>> {
         let endpoint = format!(
             "iserver/marketdata/history?conid={}&period={}&bar={}&outsideRth=false",
             conid, chart_period, chart_bar
@@ -56,7 +57,7 @@ impl IbkrClient {
     }
 }
 
-async fn fetch<T>(endpoint: &str) -> reqwest::Result<T>
+async fn fetch<T>(endpoint: &str) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {
@@ -67,10 +68,14 @@ where
         .get(&endpoint_full)
         .header("User-Agent", "IBKR Toy")
         .send()
-        .await?
-        .json()
         .await?;
-    Ok(response)
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await?;
+        anyhow::bail!("REST endpoint {} error {}: {}", endpoint_full, status, text);
+    }
+    let text = response.text().await?;
+    Ok(serde_json::from_str(&text).unwrap())
 }
 
 #[derive(Deserialize)]

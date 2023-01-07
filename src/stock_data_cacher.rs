@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::stock_data_downloader::StockData;
 use crate::stock_data_downloader::StockDataDownloader;
+use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
 use std::path::PathBuf;
@@ -35,12 +36,17 @@ impl StockDataCacher {
         }
 
         println!("Downloading stock data from IBKR");
-        let stock_data = self.downloader.download_stock_data(account_id).await?;
+        let stock_data = self
+            .downloader
+            .download_stock_data(account_id)
+            .await
+            .context("Failed to download stock data")?;
 
-        let stock_data_bson = bson::to_vec(&stock_data)?;
-        if let Err(e) = tokio::fs::write(&self.cache_path, stock_data_bson).await {
-            println!("Failed to write cache: {}", e)
-        }
+        let stock_data_bson =
+            bson::to_vec(&stock_data).context("Failed to serialize stock data to BSON")?;
+        tokio::fs::write(&self.cache_path, stock_data_bson)
+            .await
+            .context("Failed to write cache")?;
 
         Ok(stock_data)
     }

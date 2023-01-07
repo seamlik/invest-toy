@@ -1,12 +1,14 @@
 use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::ibkr_client::PortfolioPosition;
+use anyhow::bail;
 use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
 use derive_more::From;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -78,7 +80,7 @@ impl StockDataDownloader {
     async fn download_long_term_market_history(
         &self,
         conids: &[i32],
-    ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
+    ) -> anyhow::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
             let history = self
@@ -93,7 +95,7 @@ impl StockDataDownloader {
     async fn download_short_term_market_history(
         &self,
         conids: &[i32],
-    ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
+    ) -> anyhow::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
             let history = self
@@ -114,7 +116,8 @@ impl StockDataDownloader {
         let market_snapshot = market_snapshot_raw
             .into_iter()
             .map(TryInto::try_into)
-            .collect::<anyhow::Result<Vec<_>>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()
+            .context("Failed to parse market snapshot")?;
         if market_snapshot.len() != conids.len() {
             anyhow::bail!("Number of market snapshot entries does not match `conids`")
         }
@@ -123,10 +126,7 @@ impl StockDataDownloader {
         Ok(result)
     }
 
-    async fn download_portfolio(
-        &self,
-        account_id: &str,
-    ) -> reqwest::Result<Vec<PortfolioPosition>> {
+    async fn download_portfolio(&self, account_id: &str) -> anyhow::Result<Vec<PortfolioPosition>> {
         // Fetch the first page always
         let mut current_page_index = 0;
         let mut positions = self.download_portfolio_at_page(account_id, 0).await?;
@@ -148,7 +148,7 @@ impl StockDataDownloader {
         &self,
         account_id: &str,
         page_index: usize,
-    ) -> reqwest::Result<Vec<PortfolioPosition>> {
+    ) -> anyhow::Result<Vec<PortfolioPosition>> {
         let mut portfolio = self.ibkr_client.portfolio(account_id, page_index).await?;
 
         // Filter out non-stock entries because IBKR somehow keeps showing forex in my portfolio.
@@ -174,10 +174,10 @@ pub struct MarketSnapshot {
     pub pe_ratio: Option<f64>,
 }
 
-impl TryFrom<HashMap<String, String>> for MarketSnapshot {
+impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
     type Error = anyhow::Error;
 
-    fn try_from(value: HashMap<String, String>) -> Result<Self, Self::Error> {
+    fn try_from(value: HashMap<String, Value>) -> Result<Self, Self::Error> {
         let pe_ratio = extract_pe_ratio(&value)?;
         let last_price = extract_last_price(&value)?;
         let result = Self {
@@ -188,19 +188,35 @@ impl TryFrom<HashMap<String, String>> for MarketSnapshot {
     }
 }
 
-fn extract_pe_ratio(data: &HashMap<String, String>) -> anyhow::Result<Option<f64>> {
+fn extract_pe_ratio(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
     data.get(&FIELD_ID_PE_RATIO.to_string())
+        .map(unwrap_string_value)
+        .transpose()?
         .map(|raw| raw.parse())
         .transpose()
         .context("Failed to parse P/E")
 }
 
-fn extract_last_price(data: &HashMap<String, String>) -> anyhow::Result<Option<f64>> {
+fn extract_last_price(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
     data.get(&FIELD_ID_LAST_PRICE.to_string())
-        .map(|raw| raw.trim_start_matches('C').trim_start_matches('H'))
+        .map(unwrap_string_value)
+        .transpose()?
+        .map(|raw| {
+            raw.trim_start_matches('C')
+                .trim_start_matches('H')
+                .to_string()
+        })
         .map(|raw| raw.parse())
         .transpose()
         .context("Failed to parse last price")
+}
+
+fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
+    if let Value::String(text) = value {
+        Ok(text.clone())
+    } else {
+        bail!("Expects a string")
+    }
 }
 
 #[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, Debug)]
@@ -539,7 +555,7 @@ mod test {
             .collect()
     }
 
-    fn sample_raw_market_snapshot() -> Vec<HashMap<String, String>> {
+    fn sample_raw_market_snapshot() -> Vec<HashMap<String, Value>> {
         vec![
             HashMap::from([
                 (FIELD_ID_PE_RATIO.to_string(), "1".into()),

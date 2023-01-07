@@ -5,6 +5,7 @@ use crate::scoring_factor_extractor::ScoringFactorExtractor;
 use crate::stock_data_cacher::StockDataCacher;
 use crate::stock_ranker::StockRanker;
 use crate::table_printer::TablePrinter;
+use anyhow::Context;
 use clap::Parser;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -50,7 +51,7 @@ impl Toy {
         let stock_data = self
             .stock_data_cacher
             .fetch(&account_id, self.args.force_download.unwrap_or(false))
-            .await?;
+            .await.context("Failed to fetch stock data")?;
         let candidates = self
             .scoring_factor_extractor
             .extract_scoring_factors(&stock_data);
