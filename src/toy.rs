@@ -49,7 +49,7 @@ impl Toy {
 
         let stock_data = self
             .stock_data_cacher
-            .fetch(&account_id, self.args.force_download)
+            .fetch(&account_id, self.args.force_download.unwrap_or(false))
             .await?;
         let candidates = self
             .scoring_factor_extractor
@@ -62,8 +62,8 @@ impl Toy {
     }
 }
 
-#[derive(Parser, Default)]
+#[derive(Parser)]
 pub struct Cli {
     pub config: Option<PathBuf>,
-    pub force_download: bool,
+    pub force_download: Option<bool>,
 }
