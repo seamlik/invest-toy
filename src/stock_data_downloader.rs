@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
-use crate::ibkr_client::IbkrClient;
 use crate::ibkr_client::PortfolioPosition;
 use anyhow::Context;
 use chrono::DateTime;
@@ -11,8 +10,12 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+#[mockall_double::double]
+use crate::ibkr_client::IbkrClient;
+
 const FIELD_ID_LAST_PRICE: i32 = 31;
 const FIELD_ID_PE_RATIO: i32 = 7290;
+const PORTFOLIO_PAGE_SIZE: usize = 30;
 
 pub struct StockDataDownloader {
     config: Rc<Config>,
@@ -102,7 +105,7 @@ impl StockDataDownloader {
         let mut positions = self.download_portfolio_at_page(account_id, 0).await?;
 
         let mut current_page_size = positions.len();
-        while current_page_size >= 30 {
+        while current_page_size >= PORTFOLIO_PAGE_SIZE {
             current_page_index += 1;
             let next_page = self
                 .download_portfolio_at_page(account_id, current_page_index)
@@ -138,7 +141,7 @@ pub struct StockData {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct MarketSnapshot {
     pub last_price: Option<f64>,
     pub pe_ratio: Option<f64>,
@@ -176,4 +179,168 @@ fn extract_last_price(data: &HashMap<String, String>) -> anyhow::Result<Option<f
 #[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct ContractId {
     value: i32,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use mockall::predicate::*;
+
+    #[tokio::test]
+    async fn download_portfolio_from_multiple_pages() {
+        // Given
+        let entries_at_last_page = 5;
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_portfolio()
+            .with(always(), eq(0))
+            .return_once(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
+        ibkr_client
+            .expect_portfolio()
+            .with(always(), eq(1))
+            .return_once(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
+        ibkr_client
+            .expect_portfolio()
+            .with(always(), eq(2))
+            .return_once(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+        let service = StockDataDownloader {
+            config: Default::default(),
+            ibkr_client,
+        };
+        let expected_portfolio = build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE * 2 + entries_at_last_page);
+
+        // When
+        let actual_portfolio = service.download_portfolio("").await.unwrap();
+
+        // Then
+        assert_eq!(expected_portfolio, actual_portfolio);
+    }
+
+    #[tokio::test]
+    async fn download_portfolio_from_1_page() {
+        // Given
+        let entries_at_last_page = 3;
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_portfolio()
+            .with(always(), eq(0))
+            .return_once(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+        let service = StockDataDownloader {
+            config: Default::default(),
+            ibkr_client,
+        };
+        let expected_portfolio = build_portfolio_with_n_entries(entries_at_last_page);
+
+        // When
+        let actual_portfolio = service.download_portfolio("").await.unwrap();
+
+        // Then
+        assert_eq!(expected_portfolio, actual_portfolio);
+    }
+
+    #[tokio::test]
+    async fn download_portfolio_at_page() {
+        // Given
+        let raw_portfolio = vec![
+            PortfolioPosition {
+                conid: 0,
+                ticker: "TICKER".into(),
+                position: 10.0,
+                assetClass: "STK".into(),
+            },
+            PortfolioPosition {
+                conid: 0,
+                ticker: "SOLD".into(),
+                position: 0.0,
+                assetClass: "STK".into(),
+            },
+            PortfolioPosition {
+                conid: 0,
+                ticker: "CZK".into(),
+                position: 10.0,
+                assetClass: "FX".into(),
+            },
+        ];
+        let expected_portfolio = vec![PortfolioPosition {
+            conid: 0,
+            ticker: "TICKER".into(),
+            position: 10.0,
+            assetClass: "STK".into(),
+        }];
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_portfolio()
+            .return_once(move |_, _| Ok(raw_portfolio));
+        let service = StockDataDownloader {
+            config: Default::default(),
+            ibkr_client,
+        };
+
+        // When
+        let actual_portfolio = service.download_portfolio_at_page("", 0).await.unwrap();
+
+        // Then
+        assert_eq!(expected_portfolio, actual_portfolio);
+    }
+
+    #[test]
+    fn market_snapshot_try_from() {
+        // Given
+        let raw: HashMap<_, _> = [
+            (FIELD_ID_PE_RATIO.to_string(), "1".into()),
+            (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
+        ]
+        .into();
+        let expected_market_snapshot = MarketSnapshot {
+            pe_ratio: Some(1.0),
+            last_price: Some(2.0),
+        };
+
+        // When
+        let actual_market_snapshot: MarketSnapshot = raw.try_into().unwrap();
+
+        // Then
+        assert_eq!(expected_market_snapshot, actual_market_snapshot);
+    }
+
+    #[test_case::case(FIELD_ID_PE_RATIO.to_string() => Some(123.0))]
+    #[test_case::case("unknown".into()              => None)]
+    fn extract_pe_ratio(field_id: String) -> Option<f64> {
+        let raw: HashMap<_, _> = [(field_id, "123".into())].into();
+        super::extract_pe_ratio(&raw).unwrap()
+    }
+
+    #[test_case::case("C123" => 123.0)]
+    #[test_case::case("H123" => 123.0)]
+    #[test_case::case("123"  => 123.0)]
+    fn extract_last_price_ok(value: &'static str) -> f64 {
+        let raw: HashMap<_, _> = [(FIELD_ID_LAST_PRICE.to_string(), value.into())].into();
+        super::extract_last_price(&raw).unwrap().unwrap()
+    }
+
+    #[test_case::case("A123")]
+    #[test_case::case("ABC")]
+    #[test_case::case("123C")]
+    fn extract_last_price_err(value: &'static str) {
+        let raw: HashMap<_, _> = [(FIELD_ID_LAST_PRICE.to_string(), value.into())].into();
+        let parsed = super::extract_last_price(&raw);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn extract_last_price_none() {
+        let raw: HashMap<_, _> = [("unknown".into(), "123".into())].into();
+        let parsed = super::extract_last_price(&raw).unwrap();
+        assert_eq!(None, parsed);
+    }
+
+    fn build_portfolio_with_n_entries(n: usize) -> Vec<PortfolioPosition> {
+        (0..n)
+            .map(|_| PortfolioPosition {
+                position: 1.0,
+                assetClass: "STK".into(),
+                ..Default::default()
+            })
+            .collect()
+    }
 }

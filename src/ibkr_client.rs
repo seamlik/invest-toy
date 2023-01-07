@@ -8,6 +8,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct IbkrClient;
 
+#[mockall::automock]
 impl IbkrClient {
     pub async fn market_snapshot(
         &self,
@@ -83,7 +84,7 @@ pub struct PortfolioAccount {
     pub accountId: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 #[allow(non_snake_case)]
 pub struct PortfolioPosition {
     pub conid: i32,

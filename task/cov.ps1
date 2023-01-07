@@ -5,7 +5,8 @@ Write-Output "Running tests and generating code coverage report"
 $COV_DIRECTORY = "target/coverage/html"
 New-Item -ItemType Directory $COV_DIRECTORY
 
-$PROFRAW_DIRECTORY = "target/proraw"
+$PROFRAW_DIRECTORY = "target/profraw"
+Remove-Item -Recurse -Path $PROFRAW_DIRECTORY
 New-Item -ItemType Directory -Path $PROFRAW_DIRECTORY
 $PROFRAW_DIRECTORY_ABSOLUTE = Resolve-Path -Path $PROFRAW_DIRECTORY
 
