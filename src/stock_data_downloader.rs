@@ -113,7 +113,7 @@ impl StockDataDownloader {
         &self,
         conids: &[i32],
     ) -> anyhow::Result<HashMap<ContractId, MarketSnapshot>> {
-        let fields = [FIELD_ID_PE_RATIO];
+        let fields = [FIELD_ID_PE_RATIO, FIELD_ID_LAST_PRICE];
         let market_snapshot_raw = self.ibkr_client.market_snapshot(conids, &fields).await?;
         let market_snapshot = market_snapshot_raw
             .into_iter()
