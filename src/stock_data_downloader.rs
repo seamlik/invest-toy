@@ -207,7 +207,8 @@ mod test {
             config: Default::default(),
             ibkr_client,
         };
-        let expected_portfolio = build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE * 2 + entries_at_last_page);
+        let expected_portfolio =
+            build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE * 2 + entries_at_last_page);
 
         // When
         let actual_portfolio = service.download_portfolio("").await.unwrap();

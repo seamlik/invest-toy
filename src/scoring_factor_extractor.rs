@@ -113,79 +113,25 @@ mod test {
     use super::*;
     use chrono::Duration;
 
-    #[test]
-    fn price_change() {
-        // Positive change
-        let change = super::price_change(100.0, 200.0);
-        assert_eq!(Some(1.0), change);
-
-        // Negative change
-        let change = super::price_change(200.0, 100.0);
-        assert_eq!(Some(-0.5), change);
-
-        // Division by 0
-        let change = super::price_change(0.0, 100.0);
-        assert_eq!(None, change);
+    #[test_case::case(100.0 , 200.0 => Some(1.0)  ; "Positive change")]
+    #[test_case::case(200.0 , 100.0 => Some(-0.5) ; "Negative change")]
+    #[test_case::case(0.0   , 200.0 => None       ; "Division by 0")]
+    fn price_change(old_price: f64, new_price: f64) -> Option<f64> {
+        super::price_change(old_price, new_price)
     }
 
-    #[test]
-    fn last_month_entry() {
-        // Test case
-        let history = [
-            HistoricalMarketDataEntry {
-                c: 1.0,
-                t: (Utc::now() - Duration::days(300)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 2.0,
-                t: (Utc::now() - Duration::days(200)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 3.0,
-                t: (Utc::now() - Duration::days(100)).timestamp_millis(),
-            },
-        ];
-        let found_entry = super::last_month_entry(&history);
-        assert_eq!(None, found_entry);
-
-        // Test case
-        let history = [
-            HistoricalMarketDataEntry {
-                c: 1.0,
-                t: (Utc::now() - Duration::days(5)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 2.0,
-                t: (Utc::now() - Duration::days(4)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 3.0,
-                t: (Utc::now() - Duration::days(3)).timestamp_millis(),
-            },
-        ];
-        let found_entry = super::last_month_entry(&history);
-        assert_eq!(None, found_entry);
-
-        // Test case
-        let history = [
-            HistoricalMarketDataEntry {
-                c: 1.0,
-                t: (Utc::now() - Duration::days(100)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 2.0,
-                t: (Utc::now() - Duration::days(35)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 3.0,
-                t: (Utc::now() - Duration::days(30)).timestamp_millis(),
-            },
-            HistoricalMarketDataEntry {
-                c: 4.0,
-                t: (Utc::now() - Duration::days(10)).timestamp_millis(),
-            },
-        ];
-        let found_entry = super::last_month_entry(&history);
-        assert_eq!(3.0, found_entry.unwrap().c);
+    #[test_case::case(vec![300, 200, 100]   => None      ; "All entries are too old")]
+    #[test_case::case(vec![5, 4, 3]         => None      ; "All entries are too new")]
+    #[test_case::case(vec![100, 40, 30, 10] => Some(2.0) ; "Found the latest matching entry")]
+    fn last_month_entry(entries_on_days_before: Vec<i32>) -> Option<f64> {
+        let history: Vec<_> = entries_on_days_before
+            .into_iter()
+            .enumerate()
+            .map(|(index, days_before)| HistoricalMarketDataEntry {
+                c: (index as u16).into(),
+                t: (Utc::now() - Duration::days(days_before.into())).timestamp_millis(),
+            })
+            .collect();
+        super::last_month_entry(&history).map(|entry| entry.c)
     }
 }

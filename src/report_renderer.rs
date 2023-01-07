@@ -109,10 +109,10 @@ mod test {
         assert_eq!("123.46", super::render_score(1.23456));
     }
 
-    #[test]
-    fn render_float() {
-        assert_eq!("0", super::render_float(0.0));
-        assert_eq!("0.1", super::render_float(0.1));
-        assert_eq!("12.35", super::render_float(12.3456));
+    #[test_case::case(0.0 => "0"         ; "0")]
+    #[test_case::case(0.1 => "0.1"       ; "No rounding")]
+    #[test_case::case(12.3456 => "12.35" ; "Full decimal with rounding")]
+    fn render_float(value: f64) -> String {
+        super::render_float(value)
     }
 }
