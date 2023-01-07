@@ -84,7 +84,7 @@ pub struct PortfolioAccount {
     pub accountId: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 #[allow(non_snake_case)]
 pub struct PortfolioPosition {
     pub conid: i32,
@@ -98,7 +98,7 @@ pub struct HistoricalMarketData {
     pub data: Vec<HistoricalMarketDataEntry>,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct HistoricalMarketDataEntry {
     /// Price at market close
     pub c: f64,

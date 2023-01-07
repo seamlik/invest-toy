@@ -13,13 +13,25 @@ use std::rc::Rc;
 #[mockall_double::double]
 use crate::ibkr_client::IbkrClient;
 
-const FIELD_ID_LAST_PRICE: i32 = 31;
-const FIELD_ID_PE_RATIO: i32 = 7290;
+#[mockall_double::double]
+use crate::clock::Clock;
+
+const ASSERT_CLASS_STOCK: &str = "STK";
 const PORTFOLIO_PAGE_SIZE: usize = 30;
 
+const FIELD_ID_LAST_PRICE: i32 = 31;
+const FIELD_ID_PE_RATIO: i32 = 7290;
+
+const CHART_PERIOD_LONG_TERM: &str = "6y";
+const CHART_PERIOD_SHORT_TERM: &str = "2m";
+const CHART_BAR_LONG_TERM: &str = "1m";
+const CHART_BAR_SHORT_TERM: &str = "1d";
+
+#[derive(Default)]
 pub struct StockDataDownloader {
     config: Rc<Config>,
     ibkr_client: IbkrClient,
+    clock: Clock,
 }
 
 impl StockDataDownloader {
@@ -27,6 +39,7 @@ impl StockDataDownloader {
         Self {
             config,
             ibkr_client: Default::default(),
+            clock: Default::default(),
         }
     }
 
@@ -38,12 +51,20 @@ impl StockDataDownloader {
             .filter(|position| !self.config.r#override.contains_key(&position.ticker))
             .collect();
 
-        let timestamp = Utc::now();
+        let timestamp = self.clock.now();
         let conids: Vec<_> = portfolio.iter().map(|position| position.conid).collect();
+
+        if conids.is_empty() {
+            let result = StockData {
+                timestamp,
+                ..Default::default()
+            };
+            return Ok(result);
+        }
+
         let market_snapshot = self.download_market_snapshot(&conids).await?;
         let short_term_market_history = self.download_short_term_market_history(&conids).await?;
         let long_term_market_history = self.download_long_term_market_history(&conids).await?;
-
         let result = StockData {
             portfolio,
             market_snapshot,
@@ -60,7 +81,10 @@ impl StockDataDownloader {
     ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
-            let history = self.ibkr_client.market_history(conid, "6y", "1m").await?;
+            let history = self
+                .ibkr_client
+                .market_history(conid, CHART_PERIOD_LONG_TERM, CHART_BAR_LONG_TERM)
+                .await?;
             result.insert(conid.into(), history);
         }
         Ok(result)
@@ -72,7 +96,10 @@ impl StockDataDownloader {
     ) -> reqwest::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
-            let history = self.ibkr_client.market_history(conid, "2m", "1d").await?;
+            let history = self
+                .ibkr_client
+                .market_history(conid, CHART_PERIOD_SHORT_TERM, CHART_BAR_SHORT_TERM)
+                .await?;
             result.insert(conid.into(), history);
         }
         Ok(result)
@@ -126,13 +153,13 @@ impl StockDataDownloader {
 
         // Filter out non-stock entries because IBKR somehow keeps showing forex in my portfolio.
         // Filter out entries with 0 position because IBKR still include stocks I recently sold.
-        portfolio.retain(|entry| entry.assetClass == "STK" && entry.position != 0.0);
+        portfolio.retain(|entry| entry.assetClass == ASSERT_CLASS_STOCK && entry.position != 0.0);
 
         Ok(portfolio)
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default, PartialEq, Debug)]
 pub struct StockData {
     pub portfolio: Vec<PortfolioPosition>,
     pub market_snapshot: HashMap<ContractId, MarketSnapshot>,
@@ -176,7 +203,7 @@ fn extract_last_price(data: &HashMap<String, String>) -> anyhow::Result<Option<f
         .context("Failed to parse last price")
 }
 
-#[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, Debug)]
 pub struct ContractId {
     value: i32,
 }
@@ -187,28 +214,193 @@ mod test {
     use mockall::predicate::*;
 
     #[tokio::test]
+    async fn download_stock_data() {
+        let portfolio = vec![PortfolioPosition {
+            conid: 1,
+            assetClass: ASSERT_CLASS_STOCK.into(),
+            position: 1.0,
+            ..Default::default()
+        }];
+        let market_snapshot = vec![HashMap::from([
+            (FIELD_ID_LAST_PRICE.to_string(), "1".into()),
+            (FIELD_ID_PE_RATIO.to_string(), "2".into()),
+        ])];
+        let long_term_market_history = vec![HistoricalMarketDataEntry {
+            c: 1.0.into(),
+            t: 2.into(),
+        }];
+        let short_term_market_history = vec![HistoricalMarketDataEntry {
+            c: 3.0.into(),
+            t: 4.into(),
+        }];
+        let expected_stock_data = StockData {
+            portfolio: portfolio.clone(),
+            market_snapshot: HashMap::from([(
+                1.into(),
+                MarketSnapshot {
+                    last_price: 1.0.into(),
+                    pe_ratio: 2.0.into(),
+                },
+            )]),
+            long_term_market_history: HashMap::from([(1.into(), long_term_market_history.clone())]),
+            short_term_market_history: HashMap::from([(
+                1.into(),
+                short_term_market_history.clone(),
+            )]),
+            ..Default::default()
+        };
+
+        let mut clock = Clock::default();
+        clock
+            .expect_now()
+            .return_const(<DateTime<Utc> as Default>::default());
+
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_portfolio()
+            .return_once(move |_, _| Ok(portfolio));
+        ibkr_client
+            .expect_market_snapshot()
+            .return_once(move |_, _| Ok(market_snapshot));
+        ibkr_client
+            .expect_market_history()
+            .with(
+                always(),
+                eq(CHART_PERIOD_LONG_TERM),
+                eq(CHART_BAR_LONG_TERM),
+            )
+            .return_once(|_, _, _| Ok(long_term_market_history));
+        ibkr_client
+            .expect_market_history()
+            .with(
+                always(),
+                eq(CHART_PERIOD_SHORT_TERM),
+                eq(CHART_BAR_SHORT_TERM),
+            )
+            .return_once(|_, _, _| Ok(short_term_market_history));
+
+        let service = StockDataDownloader {
+            ibkr_client,
+            clock,
+            ..Default::default()
+        };
+
+        // When
+        let actual_stock_data = service.download_stock_data("").await.unwrap();
+
+        // Then
+        assert_eq!(expected_stock_data, actual_stock_data);
+    }
+
+    #[tokio::test]
+    async fn download_stock_data_from_no_portfolio() {
+        let mut clock = Clock::default();
+        clock
+            .expect_now()
+            .return_const(<DateTime<Utc> as Default>::default());
+
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client.expect_portfolio().returning(|_, _| Ok(vec![]));
+
+        let service = StockDataDownloader {
+            ibkr_client,
+            clock,
+            ..Default::default()
+        };
+
+        // When
+        let actual_stock_data = service.download_stock_data("").await.unwrap();
+
+        // Then
+        assert_eq!(StockData::default(), actual_stock_data);
+    }
+
+    #[tokio::test]
+    async fn download_market_snapshot() {
+        let expected_market_snapshot: HashMap<_, _> = [
+            (
+                1.into(),
+                MarketSnapshot {
+                    pe_ratio: 1.0.into(),
+                    last_price: 2.0.into(),
+                },
+            ),
+            (
+                2.into(),
+                MarketSnapshot {
+                    pe_ratio: 3.0.into(),
+                    last_price: 4.0.into(),
+                },
+            ),
+        ]
+        .into();
+
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_market_snapshot()
+            .returning(|_, _| Ok(sample_raw_market_snapshot()));
+
+        let service = StockDataDownloader {
+            ibkr_client,
+            ..Default::default()
+        };
+
+        // When
+        let actual_market_snapshot = service.download_market_snapshot(&[1, 2]).await.unwrap();
+
+        // Then
+        assert_eq!(expected_market_snapshot, actual_market_snapshot)
+    }
+
+    #[tokio::test]
+    async fn download_market_snapshot_from_unaligned_entries() {
+        let mut ibkr_client = IbkrClient::default();
+        ibkr_client
+            .expect_market_snapshot()
+            .returning(|_, _| Ok(sample_raw_market_snapshot()));
+
+        let service = StockDataDownloader {
+            ibkr_client,
+            ..Default::default()
+        };
+
+        // When
+        let err = service
+            .download_market_snapshot(&[1, 2, 3])
+            .await
+            .unwrap_err();
+
+        // Then
+        assert_eq!(
+            "Number of market snapshot entries does not match `conids`",
+            err.to_string()
+        );
+    }
+
+    #[tokio::test]
     async fn download_portfolio_from_multiple_pages() {
-        // Given
         let entries_at_last_page = 5;
+        let expected_portfolio =
+            build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE * 2 + entries_at_last_page);
+
         let mut ibkr_client = IbkrClient::default();
         ibkr_client
             .expect_portfolio()
             .with(always(), eq(0))
-            .return_once(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
+            .returning(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
         ibkr_client
             .expect_portfolio()
             .with(always(), eq(1))
-            .return_once(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
+            .returning(|_, _| Ok(build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE)));
         ibkr_client
             .expect_portfolio()
             .with(always(), eq(2))
-            .return_once(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+            .returning(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+
         let service = StockDataDownloader {
-            config: Default::default(),
             ibkr_client,
+            ..Default::default()
         };
-        let expected_portfolio =
-            build_portfolio_with_n_entries(PORTFOLIO_PAGE_SIZE * 2 + entries_at_last_page);
 
         // When
         let actual_portfolio = service.download_portfolio("").await.unwrap();
@@ -219,18 +411,19 @@ mod test {
 
     #[tokio::test]
     async fn download_portfolio_from_1_page() {
-        // Given
         let entries_at_last_page = 3;
+        let expected_portfolio = build_portfolio_with_n_entries(entries_at_last_page);
+
         let mut ibkr_client = IbkrClient::default();
         ibkr_client
             .expect_portfolio()
             .with(always(), eq(0))
-            .return_once(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+            .returning(move |_, _| Ok(build_portfolio_with_n_entries(entries_at_last_page)));
+
         let service = StockDataDownloader {
-            config: Default::default(),
             ibkr_client,
+            ..Default::default()
         };
-        let expected_portfolio = build_portfolio_with_n_entries(entries_at_last_page);
 
         // When
         let actual_portfolio = service.download_portfolio("").await.unwrap();
@@ -241,19 +434,18 @@ mod test {
 
     #[tokio::test]
     async fn download_portfolio_at_page() {
-        // Given
         let raw_portfolio = vec![
             PortfolioPosition {
                 conid: 0,
                 ticker: "TICKER".into(),
                 position: 10.0,
-                assetClass: "STK".into(),
+                assetClass: ASSERT_CLASS_STOCK.into(),
             },
             PortfolioPosition {
                 conid: 0,
                 ticker: "SOLD".into(),
                 position: 0.0,
-                assetClass: "STK".into(),
+                assetClass: ASSERT_CLASS_STOCK.into(),
             },
             PortfolioPosition {
                 conid: 0,
@@ -266,15 +458,17 @@ mod test {
             conid: 0,
             ticker: "TICKER".into(),
             position: 10.0,
-            assetClass: "STK".into(),
+            assetClass: ASSERT_CLASS_STOCK.into(),
         }];
+
         let mut ibkr_client = IbkrClient::default();
         ibkr_client
             .expect_portfolio()
             .return_once(move |_, _| Ok(raw_portfolio));
+
         let service = StockDataDownloader {
-            config: Default::default(),
             ibkr_client,
+            ..Default::default()
         };
 
         // When
@@ -339,9 +533,22 @@ mod test {
         (0..n)
             .map(|_| PortfolioPosition {
                 position: 1.0,
-                assetClass: "STK".into(),
+                assetClass: ASSERT_CLASS_STOCK.into(),
                 ..Default::default()
             })
             .collect()
+    }
+
+    fn sample_raw_market_snapshot() -> Vec<HashMap<String, String>> {
+        vec![
+            HashMap::from([
+                (FIELD_ID_PE_RATIO.to_string(), "1".into()),
+                (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
+            ]),
+            HashMap::from([
+                (FIELD_ID_PE_RATIO.to_string(), "3".into()),
+                (FIELD_ID_LAST_PRICE.to_string(), "4".into()),
+            ]),
+        ]
     }
 }

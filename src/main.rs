@@ -1,3 +1,4 @@
+mod clock;
 mod config;
 mod ibkr_client;
 mod report_renderer;
