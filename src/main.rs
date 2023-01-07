@@ -21,11 +21,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
 
     let default_config_path = default_config_path()?;
-    let config_path = args
-        .config
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| default_config_path);
+    let config_path = args.config.as_ref().cloned().unwrap_or(default_config_path);
     let config_yaml = tokio::fs::read_to_string(config_path).await?;
     let config = Config::parse(&config_yaml)?;
 

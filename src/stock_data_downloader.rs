@@ -257,7 +257,7 @@ impl<'de> Visitor<'de> for ContractIdVisitor {
     where
         E: serde::de::Error,
     {
-        if let Ok(parsed) = i32::from_str_radix(v, 10) {
+        if let Ok(parsed) = v.parse::<i32>() {
             Ok(parsed.into())
         } else {
             Err(serde::de::Error::invalid_value(Unexpected::Str(v), &self))
@@ -283,11 +283,11 @@ mod test {
             (FIELD_ID_PE_RATIO.to_string(), "2".into()),
         ])];
         let long_term_market_history = vec![HistoricalMarketDataEntry {
-            c: 1.0.into(),
+            c: 1.0,
             t: 2.into(),
         }];
         let short_term_market_history = vec![HistoricalMarketDataEntry {
-            c: 3.0.into(),
+            c: 3.0,
             t: 4.into(),
         }];
         let expected_stock_data = StockData {
