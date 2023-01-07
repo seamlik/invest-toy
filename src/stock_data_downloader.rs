@@ -6,6 +6,8 @@ use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
 use derive_more::From;
+use serde::de::Unexpected;
+use serde::de::Visitor;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
@@ -219,9 +221,48 @@ fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
     }
 }
 
-#[derive(From, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, Debug)]
+#[derive(From, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ContractId {
     value: i32,
+}
+
+impl Serialize for ContractId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.value.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for ContractId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(ContractIdVisitor)
+    }
+}
+
+pub struct ContractIdVisitor;
+
+impl<'de> Visitor<'de> for ContractIdVisitor {
+    type Value = ContractId;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("an `i32` number")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if let Ok(parsed) = i32::from_str_radix(v, 10) {
+            Ok(parsed.into())
+        } else {
+            Err(serde::de::Error::invalid_value(Unexpected::Str(v), &self))
+        }
+    }
 }
 
 #[cfg(test)]
