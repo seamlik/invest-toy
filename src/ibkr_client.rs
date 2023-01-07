@@ -75,7 +75,7 @@ where
         anyhow::bail!("REST endpoint {} error {}: {}", endpoint_full, status, text);
     }
     let text = response.text().await?;
-    Ok(serde_json::from_str(&text).unwrap())
+    Ok(serde_json::from_str(&text)?)
 }
 
 #[derive(Deserialize)]
