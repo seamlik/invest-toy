@@ -1,5 +1,6 @@
 mod clock;
 mod config;
+mod file_writer;
 mod ibkr_client;
 mod progress_bar;
 mod report_renderer;

@@ -39,13 +39,22 @@ pub struct StockDataDownloader {
     progress_bar: Box<dyn ProgressBar>,
 }
 
+impl Default for StockDataDownloader {
+    fn default() -> Self {
+        Self {
+            progress_bar: Box::new(indicatif::ProgressBar::new(1)),
+            config: Default::default(),
+            ibkr_client: Default::default(),
+            clock: Default::default(),
+        }
+    }
+}
+
 impl StockDataDownloader {
     pub fn new(config: Rc<Config>) -> Self {
         Self {
             config,
-            ibkr_client: Default::default(),
-            clock: Default::default(),
-            progress_bar: Box::new(indicatif::ProgressBar::new(1)),
+            ..Default::default()
         }
     }
 
@@ -362,7 +371,7 @@ mod test {
             ibkr_client,
             clock,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
+            ..Default::default()
         };
 
         // When
@@ -386,7 +395,7 @@ mod test {
             ibkr_client,
             clock,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
+            ..Default::default()
         };
 
         // When
@@ -424,8 +433,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
-            clock: Clock::default(),
+            ..Default::default()
         };
 
         // When
@@ -445,8 +453,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
-            clock: Clock::default(),
+            ..Default::default()
         };
 
         // When
@@ -485,8 +492,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
-            clock: Clock::default(),
+            ..Default::default()
         };
 
         // When
@@ -510,8 +516,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
-            clock: Clock::default(),
+            ..Default::default()
         };
 
         // When
@@ -558,8 +563,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             progress_bar: Box::<MockProgressBar>::default(),
-            config: Default::default(),
-            clock: Clock::default(),
+            ..Default::default()
         };
 
         // When

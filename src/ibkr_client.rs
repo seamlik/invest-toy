@@ -1,13 +1,18 @@
 use itertools::Itertools;
 use reqwest::Client;
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::PathBuf;
+
+#[mockall_double::double]
+use crate::file_writer::FileWriter;
 
 #[derive(Default)]
-pub struct IbkrClient;
+pub struct IbkrClient {
+    file_writer: FileWriter,
+}
 
 #[mockall::automock]
 impl IbkrClient {
@@ -22,15 +27,21 @@ impl IbkrClient {
             "iserver/marketdata/snapshot?conids={}&fields={}",
             conids_text, fields_text
         );
-        fetch(&endpoint).await
+        let data = fetch(&endpoint).await?;
+        self.file_writer
+            .write(&write_path("ibkr-market-snapshot.json"), data.as_bytes())
+            .await?;
+        serde_json::from_str(&data).map_err(Into::into)
     }
 
     pub async fn i_server_accounts(&self) -> anyhow::Result<IServerAccount> {
-        fetch("iserver/accounts").await
+        let data = fetch("iserver/accounts").await?;
+        serde_json::from_str(&data).map_err(Into::into)
     }
 
     pub async fn portfolio_accounts(&self) -> anyhow::Result<Vec<PortfolioAccount>> {
-        fetch("portfolio/accounts").await
+        let data = fetch("portfolio/accounts").await?;
+        serde_json::from_str(&data).map_err(Into::into)
     }
 
     pub async fn portfolio(
@@ -39,7 +50,8 @@ impl IbkrClient {
         page_index: usize,
     ) -> anyhow::Result<Vec<PortfolioPosition>> {
         let endpoint = format!("portfolio/{}/positions/{}", account_id, page_index);
-        fetch(&endpoint).await
+        let data = fetch(&endpoint).await?;
+        serde_json::from_str(&data).map_err(Into::into)
     }
 
     pub async fn market_history(
@@ -52,15 +64,13 @@ impl IbkrClient {
             "iserver/marketdata/history?conid={}&period={}&bar={}&outsideRth=false",
             conid, chart_period, chart_bar
         );
-        let market_history: HistoricalMarketData = fetch(&endpoint).await?;
+        let data = fetch(&endpoint).await?;
+        let market_history: HistoricalMarketData = serde_json::from_str(data.as_str())?;
         Ok(market_history.data)
     }
 }
 
-async fn fetch<T>(endpoint: &str) -> anyhow::Result<T>
-where
-    T: DeserializeOwned,
-{
+async fn fetch(endpoint: &str) -> anyhow::Result<String> {
     let endpoint_full = format!("https://127.0.0.1:5000/v1/api/{}", endpoint);
     let response = Client::builder()
         .danger_accept_invalid_certs(true)
@@ -70,12 +80,17 @@ where
         .send()
         .await?;
     let status = response.status();
+    let text = response.text().await?;
     if !status.is_success() {
-        let text = response.text().await?;
         anyhow::bail!("REST endpoint {} error {}: {}", endpoint_full, status, text);
     }
-    let text = response.text().await?;
-    Ok(serde_json::from_str(&text)?)
+    Ok(text)
+}
+
+fn write_path(name: &str) -> PathBuf {
+    let mut path = std::env::temp_dir();
+    path.push(name);
+    path
 }
 
 #[derive(Deserialize)]
