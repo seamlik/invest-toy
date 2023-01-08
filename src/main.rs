@@ -1,6 +1,7 @@
 mod clock;
 mod config;
 mod ibkr_client;
+mod progress_bar;
 mod report_renderer;
 mod scoring_factor_extractor;
 mod stock_candidates;

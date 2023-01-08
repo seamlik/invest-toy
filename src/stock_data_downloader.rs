@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::ibkr_client::HistoricalMarketDataEntry;
 use crate::ibkr_client::PortfolioPosition;
+use crate::progress_bar::ProgressBar;
 use anyhow::bail;
 use anyhow::Context;
 use chrono::DateTime;
@@ -31,11 +32,11 @@ const CHART_PERIOD_SHORT_TERM: &str = "2m";
 const CHART_BAR_LONG_TERM: &str = "1m";
 const CHART_BAR_SHORT_TERM: &str = "1d";
 
-#[derive(Default)]
 pub struct StockDataDownloader {
     config: Rc<Config>,
     ibkr_client: IbkrClient,
     clock: Clock,
+    progress_bar: Box<dyn ProgressBar>,
 }
 
 impl StockDataDownloader {
@@ -44,6 +45,7 @@ impl StockDataDownloader {
             config,
             ibkr_client: Default::default(),
             clock: Default::default(),
+            progress_bar: Box::new(indicatif::ProgressBar::new(1)),
         }
     }
 
@@ -66,9 +68,25 @@ impl StockDataDownloader {
             return Ok(result);
         }
 
-        let market_snapshot = self.download_market_snapshot(&conids).await?;
-        let short_term_market_history = self.download_short_term_market_history(&conids).await?;
-        let long_term_market_history = self.download_long_term_market_history(&conids).await?;
+        self.progress_bar.set_length(conids.len() as u64 * 2 + 1);
+        let stock_data = self.download(portfolio, timestamp, &conids).await;
+        if stock_data.is_ok() {
+            self.progress_bar.finish();
+        } else {
+            self.progress_bar.abandon();
+        }
+        stock_data
+    }
+
+    async fn download(
+        &self,
+        portfolio: Vec<PortfolioPosition>,
+        timestamp: DateTime<Utc>,
+        conids: &[i32],
+    ) -> anyhow::Result<StockData> {
+        let market_snapshot = self.download_market_snapshot(conids).await?;
+        let short_term_market_history = self.download_short_term_market_history(conids).await?;
+        let long_term_market_history = self.download_long_term_market_history(conids).await?;
         let result = StockData {
             portfolio,
             market_snapshot,
@@ -90,6 +108,7 @@ impl StockDataDownloader {
                 .market_history(conid, CHART_PERIOD_LONG_TERM, CHART_BAR_LONG_TERM)
                 .await?;
             result.insert(conid.into(), history);
+            self.progress_bar.advance();
         }
         Ok(result)
     }
@@ -105,6 +124,7 @@ impl StockDataDownloader {
                 .market_history(conid, CHART_PERIOD_SHORT_TERM, CHART_BAR_SHORT_TERM)
                 .await?;
             result.insert(conid.into(), history);
+            self.progress_bar.advance();
         }
         Ok(result)
     }
@@ -125,6 +145,7 @@ impl StockDataDownloader {
         }
         let contract_ids = conids.iter().cloned().map(From::from);
         let result = std::iter::zip(contract_ids, market_snapshot).collect();
+        self.progress_bar.advance();
         Ok(result)
     }
 
@@ -268,6 +289,7 @@ impl<'de> Visitor<'de> for ContractIdVisitor {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::progress_bar::MockProgressBar;
     use mockall::predicate::*;
 
     #[tokio::test]
@@ -339,7 +361,8 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             clock,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
         };
 
         // When
@@ -362,7 +385,8 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             clock,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
         };
 
         // When
@@ -399,7 +423,9 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
+            clock: Clock::default(),
         };
 
         // When
@@ -418,7 +444,9 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
+            clock: Clock::default(),
         };
 
         // When
@@ -456,7 +484,9 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
+            clock: Clock::default(),
         };
 
         // When
@@ -479,7 +509,9 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
+            clock: Clock::default(),
         };
 
         // When
@@ -525,7 +557,9 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            ..Default::default()
+            progress_bar: Box::<MockProgressBar>::default(),
+            config: Default::default(),
+            clock: Clock::default(),
         };
 
         // When
