@@ -8,18 +8,27 @@ use std::collections::HashMap;
 #[mockall_double::double]
 use super::notional_ranker::NotionalRanker;
 
-#[derive(Default)]
-pub struct LongTermChangeRanker {
+pub struct ForwardRanker {
     notional_ranker: NotionalRanker,
+    factor_type: ScoringFactor,
 }
 
-impl FactorRanker for LongTermChangeRanker {
+impl ForwardRanker {
+    pub fn new(factor_type: ScoringFactor) -> Self {
+        Self {
+            notional_ranker: Default::default(),
+            factor_type,
+        }
+    }
+}
+
+impl FactorRanker for ForwardRanker {
     fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
             .filter_map(|(name, factors)| {
                 factors
-                    .get(&ScoringFactor::LongTermChange)
+                    .get(&self.factor_type)
                     .filter(|notional| notional.value > 0.0)
                     .cloned()
                     .map(|notional| (name.clone(), notional))
@@ -63,7 +72,10 @@ mod test {
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = LongTermChangeRanker { notional_ranker };
+        let service = ForwardRanker {
+            notional_ranker,
+            factor_type: ScoringFactor::LongTermChange,
+        };
 
         // When
         let actual_scores = service.rank(&stock_candidates);
@@ -83,7 +95,10 @@ mod test {
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = LongTermChangeRanker { notional_ranker };
+        let service = ForwardRanker {
+            notional_ranker,
+            factor_type: ScoringFactor::LongTermChange,
+        };
 
         // When
         let actual_scores = service.rank(&stock_candidates);

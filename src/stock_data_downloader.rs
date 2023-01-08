@@ -24,8 +24,10 @@ use crate::clock::Clock;
 const ASSERT_CLASS_STOCK: &str = "STK";
 const PORTFOLIO_PAGE_SIZE: usize = 30;
 
+const FIELD_ID_DIVIDEND_YIELD: i32 = 7287;
 const FIELD_ID_LAST_PRICE: i32 = 31;
 const FIELD_ID_PE_RATIO: i32 = 7290;
+const FIELD_ID_SYMBOL: i32 = 55;
 
 const CHART_PERIOD_LONG_TERM: &str = "6y";
 const CHART_PERIOD_SHORT_TERM: &str = "2m";
@@ -142,7 +144,12 @@ impl StockDataDownloader {
         &self,
         conids: &[i64],
     ) -> anyhow::Result<HashMap<ContractId, MarketSnapshot>> {
-        let fields = [FIELD_ID_PE_RATIO, FIELD_ID_LAST_PRICE];
+        let fields = [
+            FIELD_ID_PE_RATIO,
+            FIELD_ID_LAST_PRICE,
+            FIELD_ID_DIVIDEND_YIELD,
+            FIELD_ID_SYMBOL,
+        ];
         let market_snapshot_raw = self.ibkr_client.market_snapshot(conids, &fields).await?;
         let market_snapshot = market_snapshot_raw
             .into_iter()
@@ -204,6 +211,7 @@ pub struct MarketSnapshot {
     pub conid: i64,
     pub last_price: Option<f64>,
     pub pe_ratio: Option<f64>,
+    pub dividend_yield: Option<f64>,
 }
 
 impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
@@ -214,6 +222,7 @@ impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
             conid: extract_conid(&value)?,
             pe_ratio: extract_pe_ratio(&value)?,
             last_price: extract_last_price(&value)?,
+            dividend_yield: extract_dividend_yield(&value)?,
         };
         Ok(result)
     }
@@ -247,6 +256,16 @@ fn extract_conid(data: &HashMap<String, Value>) -> anyhow::Result<i64> {
         .ok_or_else(|| anyhow::anyhow!("No `conid`"))?
         .as_i64()
         .ok_or_else(|| anyhow::anyhow!("`conid` does not contain an `i64`"))
+}
+
+fn extract_dividend_yield(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
+    data.get(&FIELD_ID_DIVIDEND_YIELD.to_string())
+        .map(unwrap_string_value)
+        .transpose()?
+        .map(|raw| raw.trim_end_matches('%').to_string())
+        .map(|raw| raw.parse::<f64>().map(|notional| notional / 100.0))
+        .transpose()
+        .context("Failed to parse P/E")
 }
 
 fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
@@ -319,6 +338,7 @@ mod test {
             ("conid".into(), 1.into()),
             (FIELD_ID_LAST_PRICE.to_string(), "1".into()),
             (FIELD_ID_PE_RATIO.to_string(), "2".into()),
+            (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
         ])];
         let long_term_market_history = vec![HistoricalMarketDataEntry {
             c: 1.0,
@@ -336,6 +356,7 @@ mod test {
                     conid: 1,
                     last_price: 1.0.into(),
                     pe_ratio: 2.0.into(),
+                    dividend_yield: 0.03.into(),
                 },
             )]),
             long_term_market_history: HashMap::from([(1.into(), long_term_market_history.clone())]),
@@ -422,6 +443,7 @@ mod test {
                     conid: 1,
                     pe_ratio: 1.0.into(),
                     last_price: 2.0.into(),
+                    dividend_yield: 0.03.into(),
                 },
             ),
             (
@@ -430,6 +452,7 @@ mod test {
                     conid: 2,
                     pe_ratio: 3.0.into(),
                     last_price: 4.0.into(),
+                    dividend_yield: 0.05.into(),
                 },
             ),
         ]
@@ -567,12 +590,14 @@ mod test {
             ("conid".into(), 1.into()),
             (FIELD_ID_PE_RATIO.to_string(), "1".into()),
             (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
+            (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
         ]
         .into();
         let expected_market_snapshot = MarketSnapshot {
             conid: 1,
-            pe_ratio: Some(1.0),
-            last_price: Some(2.0),
+            pe_ratio: 1.0.into(),
+            last_price: 2.0.into(),
+            dividend_yield: 0.03.into(),
         };
 
         // When
@@ -629,11 +654,13 @@ mod test {
                 ("conid".into(), 1.into()),
                 (FIELD_ID_PE_RATIO.to_string(), "1".into()),
                 (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
+                (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
             ]),
             HashMap::from([
                 ("conid".into(), 2.into()),
                 (FIELD_ID_PE_RATIO.to_string(), "3".into()),
                 (FIELD_ID_LAST_PRICE.to_string(), "4".into()),
+                (FIELD_ID_DIVIDEND_YIELD.to_string(), "5%".into()),
             ]),
         ]
     }

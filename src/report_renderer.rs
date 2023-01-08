@@ -42,12 +42,15 @@ fn render_entry(
         pe_ratio: factors
             .get(&ScoringFactor::PeRatio)
             .map_or_else(|| none.clone(), |notional| render_float(notional.value)),
+        dividend_yield: factors
+            .get(&ScoringFactor::DividendYield)
+            .map_or_else(|| none.clone(), render_percentage),
         short_term_change: factors
             .get(&ScoringFactor::ShortTermChange)
-            .map_or_else(|| none.clone(), render_change),
+            .map_or_else(|| none.clone(), render_percentage),
         long_term_change: factors
             .get(&ScoringFactor::LongTermChange)
-            .map_or_else(|| none.clone(), render_change),
+            .map_or_else(|| none.clone(), render_percentage),
     }
 }
 
@@ -58,7 +61,7 @@ fn render_float(value: f64) -> String {
         .into()
 }
 
-fn render_change(change: &Notional) -> String {
+fn render_percentage(change: &Notional) -> String {
     format!("{}%", render_float(change.value * 100.0))
 }
 
@@ -71,6 +74,7 @@ pub struct ReportEntry {
     ticker: String,
     score: String,
     pe_ratio: String,
+    dividend_yield: String,
     short_term_change: String,
     long_term_change: String,
 }
@@ -101,7 +105,7 @@ mod test {
 
     #[test]
     fn render_change() {
-        assert_eq!("28.45%", super::render_change(&0.284513.into()));
+        assert_eq!("28.45%", super::render_percentage(&0.284513.into()));
     }
 
     #[test]

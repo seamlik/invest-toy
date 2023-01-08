@@ -25,12 +25,21 @@ impl ScoringFactorExtractor {
             let ticker: Ticker = position.ticker.as_str().into();
 
             // Extract P/E
-            if let Some(notional) = stock_data
-                .market_snapshot
-                .get(&conid)
-                .and_then(|snapshot| snapshot.pe_ratio)
-            {
-                candidates.add_candidate(ticker.clone(), ScoringFactor::PeRatio, notional.into());
+            if let Some(snapshot) = stock_data.market_snapshot.get(&conid) {
+                if let Some(notional) = snapshot.pe_ratio {
+                    candidates.add_candidate(
+                        ticker.clone(),
+                        ScoringFactor::PeRatio,
+                        notional.into(),
+                    );
+                }
+                if let Some(notional) = snapshot.dividend_yield {
+                    candidates.add_candidate(
+                        ticker.clone(),
+                        ScoringFactor::DividendYield,
+                        notional.into(),
+                    );
+                }
             }
 
             // Long-term price change
@@ -65,6 +74,8 @@ pub enum ScoringFactor {
 
     /// Change of the stock price in the short term.
     ShortTermChange,
+
+    DividendYield,
 }
 
 fn extract_long_term_price_change(conid: ContractId, stock_data: &StockData) -> Option<f64> {
