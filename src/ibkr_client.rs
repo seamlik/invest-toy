@@ -18,7 +18,7 @@ pub struct IbkrClient {
 impl IbkrClient {
     pub async fn market_snapshot(
         &self,
-        conids: &[i32],
+        conids: &[i64],
         fields: &[i32],
     ) -> anyhow::Result<Vec<HashMap<String, Value>>> {
         let conids_text = conids.iter().join(",");
@@ -56,7 +56,7 @@ impl IbkrClient {
 
     pub async fn market_history(
         &self,
-        conid: i32,
+        conid: i64,
         chart_period: &str,
         chart_bar: &str,
     ) -> anyhow::Result<Vec<HistoricalMarketDataEntry>> {
@@ -107,7 +107,7 @@ pub struct PortfolioAccount {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 #[allow(non_snake_case)]
 pub struct PortfolioPosition {
-    pub conid: i32,
+    pub conid: i64,
     pub ticker: String,
     pub position: f64,
     pub assetClass: String,

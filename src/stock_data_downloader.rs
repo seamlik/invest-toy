@@ -91,7 +91,7 @@ impl StockDataDownloader {
         &self,
         portfolio: Vec<PortfolioPosition>,
         timestamp: DateTime<Utc>,
-        conids: &[i32],
+        conids: &[i64],
     ) -> anyhow::Result<StockData> {
         let market_snapshot = self.download_market_snapshot(conids).await?;
         let short_term_market_history = self.download_short_term_market_history(conids).await?;
@@ -108,7 +108,7 @@ impl StockDataDownloader {
 
     async fn download_long_term_market_history(
         &self,
-        conids: &[i32],
+        conids: &[i64],
     ) -> anyhow::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
@@ -124,7 +124,7 @@ impl StockDataDownloader {
 
     async fn download_short_term_market_history(
         &self,
-        conids: &[i32],
+        conids: &[i64],
     ) -> anyhow::Result<HashMap<ContractId, Vec<HistoricalMarketDataEntry>>> {
         let mut result = HashMap::default();
         for conid in conids.iter().cloned() {
@@ -140,22 +140,21 @@ impl StockDataDownloader {
 
     async fn download_market_snapshot(
         &self,
-        conids: &[i32],
+        conids: &[i64],
     ) -> anyhow::Result<HashMap<ContractId, MarketSnapshot>> {
         let fields = [FIELD_ID_PE_RATIO, FIELD_ID_LAST_PRICE];
         let market_snapshot_raw = self.ibkr_client.market_snapshot(conids, &fields).await?;
         let market_snapshot = market_snapshot_raw
             .into_iter()
             .map(TryInto::try_into)
-            .collect::<anyhow::Result<Vec<_>>>()
+            .collect::<anyhow::Result<Vec<MarketSnapshot>>>()
             .context("Failed to parse market snapshot")?;
-        if market_snapshot.len() != conids.len() {
-            anyhow::bail!("Number of market snapshot entries does not match `conids`")
-        }
-        let contract_ids = conids.iter().cloned().map(From::from);
-        let result = std::iter::zip(contract_ids, market_snapshot).collect();
+        let market_snapshot_map: HashMap<_, _> = market_snapshot
+            .into_iter()
+            .map(|snapshot| (snapshot.conid.into(), snapshot))
+            .collect();
         self.progress_bar.advance();
-        Ok(result)
+        Ok(market_snapshot_map)
     }
 
     async fn download_portfolio(&self, account_id: &str) -> anyhow::Result<Vec<PortfolioPosition>> {
@@ -202,6 +201,7 @@ pub struct StockData {
 
 #[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub struct MarketSnapshot {
+    pub conid: i64,
     pub last_price: Option<f64>,
     pub pe_ratio: Option<f64>,
 }
@@ -210,11 +210,10 @@ impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
     type Error = anyhow::Error;
 
     fn try_from(value: HashMap<String, Value>) -> Result<Self, Self::Error> {
-        let pe_ratio = extract_pe_ratio(&value)?;
-        let last_price = extract_last_price(&value)?;
         let result = Self {
-            pe_ratio,
-            last_price,
+            conid: extract_conid(&value)?,
+            pe_ratio: extract_pe_ratio(&value)?,
+            last_price: extract_last_price(&value)?,
         };
         Ok(result)
     }
@@ -243,6 +242,13 @@ fn extract_last_price(data: &HashMap<String, Value>) -> anyhow::Result<Option<f6
         .context("Failed to parse last price")
 }
 
+fn extract_conid(data: &HashMap<String, Value>) -> anyhow::Result<i64> {
+    data.get("conid")
+        .ok_or_else(|| anyhow::anyhow!("No `conid`"))?
+        .as_i64()
+        .ok_or_else(|| anyhow::anyhow!("`conid` does not contain an `i64`"))
+}
+
 fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
     if let Value::String(text) = value {
         Ok(text.clone())
@@ -253,7 +259,7 @@ fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
 
 #[derive(From, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct ContractId {
-    value: i32,
+    value: i64,
 }
 
 impl Serialize for ContractId {
@@ -280,14 +286,14 @@ impl<'de> Visitor<'de> for ContractIdVisitor {
     type Value = ContractId;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("an `i32` number")
+        formatter.write_str("an `i64`")
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        if let Ok(parsed) = v.parse::<i32>() {
+        if let Ok(parsed) = v.parse::<i64>() {
             Ok(parsed.into())
         } else {
             Err(serde::de::Error::invalid_value(Unexpected::Str(v), &self))
@@ -310,6 +316,7 @@ mod test {
             ..Default::default()
         }];
         let market_snapshot = vec![HashMap::from([
+            ("conid".into(), 1.into()),
             (FIELD_ID_LAST_PRICE.to_string(), "1".into()),
             (FIELD_ID_PE_RATIO.to_string(), "2".into()),
         ])];
@@ -326,6 +333,7 @@ mod test {
             market_snapshot: HashMap::from([(
                 1.into(),
                 MarketSnapshot {
+                    conid: 1,
                     last_price: 1.0.into(),
                     pe_ratio: 2.0.into(),
                 },
@@ -370,7 +378,7 @@ mod test {
         let service = StockDataDownloader {
             ibkr_client,
             clock,
-            progress_bar: Box::<MockProgressBar>::default(),
+            progress_bar: mock_dummy_progress_bar(),
             ..Default::default()
         };
 
@@ -411,6 +419,7 @@ mod test {
             (
                 1.into(),
                 MarketSnapshot {
+                    conid: 1,
                     pe_ratio: 1.0.into(),
                     last_price: 2.0.into(),
                 },
@@ -418,6 +427,7 @@ mod test {
             (
                 2.into(),
                 MarketSnapshot {
+                    conid: 2,
                     pe_ratio: 3.0.into(),
                     last_price: 4.0.into(),
                 },
@@ -432,41 +442,18 @@ mod test {
 
         let service = StockDataDownloader {
             ibkr_client,
-            progress_bar: Box::<MockProgressBar>::default(),
+            progress_bar: mock_dummy_progress_bar(),
             ..Default::default()
         };
 
         // When
-        let actual_market_snapshot = service.download_market_snapshot(&[1, 2]).await.unwrap();
+        let actual_market_snapshot = service
+            .download_market_snapshot(&[1, 2, 3, 4])
+            .await
+            .unwrap();
 
         // Then
         assert_eq!(expected_market_snapshot, actual_market_snapshot)
-    }
-
-    #[tokio::test]
-    async fn download_market_snapshot_from_unaligned_entries() {
-        let mut ibkr_client = IbkrClient::default();
-        ibkr_client
-            .expect_market_snapshot()
-            .returning(|_, _| Ok(sample_raw_market_snapshot()));
-
-        let service = StockDataDownloader {
-            ibkr_client,
-            progress_bar: Box::<MockProgressBar>::default(),
-            ..Default::default()
-        };
-
-        // When
-        let err = service
-            .download_market_snapshot(&[1, 2, 3])
-            .await
-            .unwrap_err();
-
-        // Then
-        assert_eq!(
-            "Number of market snapshot entries does not match `conids`",
-            err.to_string()
-        );
     }
 
     #[tokio::test]
@@ -577,11 +564,13 @@ mod test {
     fn market_snapshot_try_from() {
         // Given
         let raw: HashMap<_, _> = [
+            ("conid".into(), 1.into()),
             (FIELD_ID_PE_RATIO.to_string(), "1".into()),
             (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
         ]
         .into();
         let expected_market_snapshot = MarketSnapshot {
+            conid: 1,
             pe_ratio: Some(1.0),
             last_price: Some(2.0),
         };
@@ -637,13 +626,23 @@ mod test {
     fn sample_raw_market_snapshot() -> Vec<HashMap<String, Value>> {
         vec![
             HashMap::from([
+                ("conid".into(), 1.into()),
                 (FIELD_ID_PE_RATIO.to_string(), "1".into()),
                 (FIELD_ID_LAST_PRICE.to_string(), "2".into()),
             ]),
             HashMap::from([
+                ("conid".into(), 2.into()),
                 (FIELD_ID_PE_RATIO.to_string(), "3".into()),
                 (FIELD_ID_LAST_PRICE.to_string(), "4".into()),
             ]),
         ]
+    }
+
+    fn mock_dummy_progress_bar() -> Box<dyn ProgressBar> {
+        let mut progress_bar = MockProgressBar::default();
+        progress_bar.expect_set_length().return_const(());
+        progress_bar.expect_finish().return_const(());
+        progress_bar.expect_advance().return_const(());
+        Box::new(progress_bar)
     }
 }
