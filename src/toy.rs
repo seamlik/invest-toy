@@ -1,5 +1,7 @@
+use crate::arithmetic_renderer::ArithmeticRenderer;
 use crate::config::Config;
 use crate::ibkr_client::IbkrClient;
+use crate::invest_advisor::InvestAdvisor;
 use crate::report_renderer::ReportRenderer;
 use crate::scoring_factor_extractor::ScoringFactorExtractor;
 use crate::stock_data_cacher::StockDataCacher;
@@ -18,6 +20,7 @@ pub struct Toy {
     ibkr_client: IbkrClient,
     stock_data_cacher: StockDataCacher,
     scoring_factor_extractor: ScoringFactorExtractor,
+    invest_advisor: InvestAdvisor,
 }
 
 impl Toy {
@@ -26,10 +29,15 @@ impl Toy {
             args,
             ranker: Default::default(),
             table_printer: TablePrinter,
-            report_renderer: ReportRenderer,
+            report_renderer: ReportRenderer {
+                arithmetic_renderer: ArithmeticRenderer,
+            },
             ibkr_client: Default::default(),
             stock_data_cacher: StockDataCacher::new(config.clone()),
             scoring_factor_extractor: ScoringFactorExtractor::new(config),
+            invest_advisor: InvestAdvisor {
+                arithmetic_renderer: ArithmeticRenderer,
+            },
         }
     }
 
@@ -58,7 +66,20 @@ impl Toy {
             .extract_scoring_factors(&stock_data);
         let scores = self.ranker.rank(&candidates);
         let report = self.report_renderer.render(&candidates, &scores);
+
+        println!();
+        println!("=============");
+        println!("Score details");
+        println!("=============");
         self.table_printer.print(&report).await?;
+
+        let invest_advices = self.invest_advisor.render_advice(&scores);
+
+        println!();
+        println!("==================");
+        println!("Investment advices");
+        println!("==================");
+        self.table_printer.print(&invest_advices).await?;
 
         Ok(())
     }

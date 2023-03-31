@@ -1,3 +1,4 @@
+use crate::arithmetic_renderer::ArithmeticRenderer;
 use crate::scoring_factor_extractor::ScoringFactor;
 use crate::stock_candidates::StockCandidates;
 use crate::stock_ranker::Notional;
@@ -7,7 +8,9 @@ use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
 
-pub struct ReportRenderer;
+pub struct ReportRenderer {
+    pub arithmetic_renderer: ArithmeticRenderer,
+}
 
 impl ReportRenderer {
     pub fn render(
@@ -25,48 +28,42 @@ impl ReportRenderer {
                 )
             })
             .sorted_unstable_by(|(_, _, x), (_, _, y)| y.total_cmp(x))
-            .map(|(ticker, factors, score)| render_entry(ticker, factors, score))
+            .map(|(ticker, factors, score)| self.render_entry(ticker, factors, score))
             .collect()
     }
-}
 
-fn render_entry(
-    ticker: String,
-    factors: &HashMap<ScoringFactor, Notional>,
-    score: f64,
-) -> ReportEntry {
-    let none = "None".to_string();
-    ReportEntry {
-        ticker,
-        score: render_score(score),
-        pe_ratio: factors
-            .get(&ScoringFactor::PeRatio)
-            .map_or_else(|| none.clone(), |notional| render_float(notional.value)),
-        dividend_yield: factors
-            .get(&ScoringFactor::DividendYield)
-            .map_or_else(|| none.clone(), render_percentage),
-        short_term_change: factors
-            .get(&ScoringFactor::ShortTermChange)
-            .map_or_else(|| none.clone(), render_percentage),
-        long_term_change: factors
-            .get(&ScoringFactor::LongTermChange)
-            .map_or_else(|| none.clone(), render_percentage),
+    fn render_score(&self, score: f64) -> String {
+        self.arithmetic_renderer.render_float(score * 100.0)
     }
-}
 
-fn render_float(value: f64) -> String {
-    format!("{:.2}", value)
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .into()
-}
-
-fn render_percentage(change: &Notional) -> String {
-    format!("{}%", render_float(change.value * 100.0))
-}
-
-fn render_score(score: f64) -> String {
-    render_float(score * 100.0)
+    fn render_entry(
+        &self,
+        ticker: String,
+        factors: &HashMap<ScoringFactor, Notional>,
+        score: f64,
+    ) -> ReportEntry {
+        let none = "None".to_string();
+        ReportEntry {
+            ticker,
+            score: self.render_score(score),
+            pe_ratio: factors.get(&ScoringFactor::PeRatio).map_or_else(
+                || none.clone(),
+                |notional| self.arithmetic_renderer.render_float(notional.value),
+            ),
+            dividend_yield: factors.get(&ScoringFactor::DividendYield).map_or_else(
+                || none.clone(),
+                |v| self.arithmetic_renderer.render_percentage(v),
+            ),
+            short_term_change: factors.get(&ScoringFactor::ShortTermChange).map_or_else(
+                || none.clone(),
+                |v| self.arithmetic_renderer.render_percentage(v),
+            ),
+            long_term_change: factors.get(&ScoringFactor::LongTermChange).map_or_else(
+                || none.clone(),
+                |v| self.arithmetic_renderer.render_percentage(v),
+            ),
+        }
+    }
 }
 
 #[derive(Serialize, Default, PartialEq, Eq, Debug)]
@@ -86,7 +83,9 @@ mod test {
     #[test]
     fn entries_sorted_descendingly() {
         // Given
-        let service = ReportRenderer;
+        let service = ReportRenderer {
+            arithmetic_renderer: ArithmeticRenderer,
+        };
         let candidates: StockCandidates =
             [("A", Default::default()), ("B", Default::default())].into();
         let scores: HashMap<_, _> = [("A".into(), 1.0.into()), ("B".into(), 2.0.into())].into();
@@ -101,22 +100,5 @@ mod test {
 
         // Then
         assert_eq!(expected_tickers, actual_tickers);
-    }
-
-    #[test]
-    fn render_change() {
-        assert_eq!("28.45%", super::render_percentage(&0.284513.into()));
-    }
-
-    #[test]
-    fn render_score() {
-        assert_eq!("123.46", super::render_score(1.23456));
-    }
-
-    #[test_case::case(0.0 => "0"         ; "0")]
-    #[test_case::case(0.1 => "0.1"       ; "No rounding")]
-    #[test_case::case(12.3456 => "12.35" ; "Full decimal with rounding")]
-    fn render_float(value: f64) -> String {
-        super::render_float(value)
     }
 }
