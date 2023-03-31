@@ -3,10 +3,10 @@
 # Tasks
 switch ($args[0]) {
     format {
-        Format-All
+        pwsh "$PSScriptRoot/task/format-all.ps1"
     }
     cov {
-        pwsh task/cov.ps1
+        pwsh "$PSScriptRoot/task/cov.ps1"
     }
     default {
         throw "Unknown task"
