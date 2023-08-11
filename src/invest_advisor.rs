@@ -6,6 +6,8 @@ use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
 
+static NUM_CANDIDATES: usize = 19;
+
 pub struct InvestAdvisor {
     pub arithmetic_renderer: ArithmeticRenderer,
 }
@@ -17,7 +19,7 @@ impl InvestAdvisor {
             .sorted_unstable_by(|(_, score_a), (_, score_b)| {
                 score_b.value.total_cmp(&score_a.value)
             })
-            .take(16)
+            .take(NUM_CANDIDATES)
             .collect();
         let total_score = candidates.iter().map(|(_, score)| score.value).sum();
         candidates
