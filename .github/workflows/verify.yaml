@@ -11,10 +11,12 @@ jobs:
         name: Cache Rust
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
+            ~/.cargo/bin
+            ~/.cargo/git/db
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+            target
+            target-install
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
       - uses: actions/cache@v3
@@ -24,6 +26,8 @@ jobs:
           key: ${{ runner.os }}-node
       - run: npm install --global prettier
       - run: cargo install --git https://github.com/seamlik/devops.git --force
+        env:
+          CARGO_TARGET_DIR: target-install
       - run: devops format
       - run: git --no-pager diff --exit-code
       - run: cargo test
