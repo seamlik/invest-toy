@@ -2,7 +2,5 @@
 .vscode/
 /build/
 /Cargo.lock
-/node_modules/
-/package-lock.json
 /target-coverage/
 /target/

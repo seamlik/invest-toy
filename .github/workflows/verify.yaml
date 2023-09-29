@@ -1,13 +1,14 @@
-name: Verify
+name: verify
 on:
   - push
   - pull_request
 jobs:
-  rust:
+  main:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
+        name: Cache Rust
         with:
           path: |
             ~/.cargo/bin/
@@ -16,5 +17,13 @@ jobs:
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - run: pwsh task/verify-formatting.ps1
+      - uses: actions/cache@v3
+        name: Cache NPM
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node
+      - run: npm install --global prettier
+      - run: cargo install --git https://github.com/seamlik/devops.git --force
+      - run: devops format
+      - run: git --no-pager diff --exit-code
       - run: cargo test
