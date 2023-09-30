@@ -70,7 +70,9 @@ impl Toy {
         println!("=============");
         self.table_printer.print(&report).await?;
 
-        let invest_advices = self.invest_advisor.render_advice(&scores);
+        let invest_advices = self
+            .invest_advisor
+            .render_advice(&scores, self.args.invest_num);
 
         println!();
         println!("==================");
@@ -84,6 +86,11 @@ impl Toy {
 
 #[derive(Parser)]
 pub struct Cli {
+    /// Force-download data from IBKR, refreshing the cache.
     #[arg(long)]
     pub force_download: bool,
+
+    /// Number of stocks to invest.
+    #[arg(long, default_value = "16")]
+    pub invest_num: usize,
 }
