@@ -1,3 +1,4 @@
+use anyhow::Context;
 use serde::Serialize;
 use tokio::process::Command;
 
@@ -5,7 +6,12 @@ pub struct TablePrinter;
 
 impl TablePrinter {
     pub async fn print<T: Serialize>(&self, table: &T) -> anyhow::Result<()> {
-        if !build_process_to_print(table)?.status().await?.success() {
+        let successful = build_process_to_print(table)?
+            .status()
+            .await
+            .context("Node.js is not installed")?
+            .success();
+        if !successful {
             anyhow::bail!("Failed in printing the table in Node.js")
         }
         Ok(())
