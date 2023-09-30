@@ -1,7 +1,9 @@
+mod negative_least_winning_ranker;
 mod notional_ranker;
 mod positive_greatest_winning_ranker;
 mod positive_least_winning_ranker;
 
+use self::negative_least_winning_ranker::NegativeLeastWinningRanker;
 use self::positive_greatest_winning_ranker::PositiveGreatestWinningRanker;
 use self::positive_least_winning_ranker::PositiveLeastWinningRanker;
 use crate::scoring_factor_extractor::ScoringFactor;
@@ -25,6 +27,12 @@ impl Default for StockRanker {
                     ScoringFactor::DividendYield,
                 )),
                 Box::new(PositiveLeastWinningRanker::new(ScoringFactor::PeRatio)),
+                Box::new(NegativeLeastWinningRanker::new(
+                    ScoringFactor::PriceEma20Change,
+                )),
+                Box::new(PositiveGreatestWinningRanker::new(
+                    ScoringFactor::PriceEma200Change,
+                )),
             ],
         }
     }

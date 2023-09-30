@@ -54,6 +54,14 @@ impl ReportRenderer {
                 || none.clone(),
                 |v| self.arithmetic_renderer.render_percentage(v),
             ),
+            pema_20: factors.get(&ScoringFactor::PriceEma20Change).map_or_else(
+                || none.clone(),
+                |v| self.arithmetic_renderer.render_percentage(v),
+            ),
+            pema_200: factors.get(&ScoringFactor::PriceEma200Change).map_or_else(
+                || none.clone(),
+                |v| self.arithmetic_renderer.render_percentage(v),
+            ),
         }
     }
 }
@@ -64,6 +72,8 @@ pub struct ReportEntry {
     score: String,
     pe_ratio: String,
     dividend_yield: String,
+    pema_20: String,
+    pema_200: String,
 }
 
 #[cfg(test)]
@@ -71,9 +81,9 @@ mod test {
     use super::*;
 
     #[test]
-    fn entries_sorted_descendingly() {
+    fn entries_sorted_by_score_descendingly() {
         // Given
-        let service = ReportRenderer {
+        let renderer = ReportRenderer {
             arithmetic_renderer: ArithmeticRenderer,
         };
         let candidates: StockCandidates =
@@ -82,7 +92,7 @@ mod test {
         let expected_tickers = vec!["B".to_string(), "A".to_string()];
 
         // When
-        let actual_report = service.render(&candidates, &scores);
+        let actual_report = renderer.render(&candidates, &scores);
         let actual_tickers: Vec<_> = actual_report
             .into_iter()
             .map(|entry| entry.ticker)

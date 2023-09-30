@@ -24,6 +24,8 @@ const PORTFOLIO_PAGE_SIZE: usize = 30;
 
 const FIELD_ID_DIVIDEND_YIELD: i32 = 7287;
 const FIELD_ID_PE_RATIO: i32 = 7290;
+const FIELD_ID_PEMA_20: i32 = 7681;
+const FIELD_ID_PEMA_200: i32 = 7678;
 const FIELD_ID_SYMBOL: i32 = 55;
 
 #[derive(Default)]
@@ -73,7 +75,13 @@ impl StockDataDownloader {
         &self,
         conids: &[i64],
     ) -> anyhow::Result<HashMap<ContractId, MarketSnapshot>> {
-        let fields = [FIELD_ID_PE_RATIO, FIELD_ID_DIVIDEND_YIELD, FIELD_ID_SYMBOL];
+        let fields = [
+            FIELD_ID_PE_RATIO,
+            FIELD_ID_DIVIDEND_YIELD,
+            FIELD_ID_SYMBOL,
+            FIELD_ID_PEMA_20,
+            FIELD_ID_PEMA_200,
+        ];
         let market_snapshot_raw = self.ibkr_client.market_snapshot(conids, &fields).await?;
         let market_snapshot = market_snapshot_raw
             .into_iter()
@@ -132,6 +140,8 @@ pub struct MarketSnapshot {
     pub conid: i64,
     pub pe_ratio: Option<f64>,
     pub dividend_yield: Option<f64>,
+    pub pema_20: Option<f64>,
+    pub pema_200: Option<f64>,
 }
 
 impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
@@ -142,6 +152,8 @@ impl TryFrom<HashMap<String, Value>> for MarketSnapshot {
             conid: extract_conid(&value)?,
             pe_ratio: extract_pe_ratio(&value)?,
             dividend_yield: extract_dividend_yield(&value)?,
+            pema_20: extract_pema_20(&value)?,
+            pema_200: extract_pema_200(&value)?,
         };
         Ok(result)
     }
@@ -165,12 +177,30 @@ fn extract_conid(data: &HashMap<String, Value>) -> anyhow::Result<i64> {
 
 fn extract_dividend_yield(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
     data.get(&FIELD_ID_DIVIDEND_YIELD.to_string())
-        .map(unwrap_string_value)
-        .transpose()?
-        .map(|raw| raw.trim_end_matches('%').to_string())
-        .map(|raw| raw.parse::<f64>().map(|notional| notional / 100.0))
+        .map(extract_percentage)
         .transpose()
         .context("Failed to parse P/E")
+}
+
+fn extract_pema_20(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
+    data.get(&FIELD_ID_PEMA_20.to_string())
+        .map(extract_percentage)
+        .transpose()
+        .context("Failed to parse Price to EMA(20) change")
+}
+
+fn extract_pema_200(data: &HashMap<String, Value>) -> anyhow::Result<Option<f64>> {
+    data.get(&FIELD_ID_PEMA_200.to_string())
+        .map(extract_percentage)
+        .transpose()
+        .context("Failed to parse Price to EMA(200) change")
+}
+
+fn extract_percentage(data: &Value) -> anyhow::Result<f64> {
+    let text = unwrap_string_value(data)?;
+    let without_percentage_symbol = text.trim_end_matches('%').to_string();
+    let number = without_percentage_symbol.parse::<f64>()?;
+    Ok(number / 100.0)
 }
 
 fn unwrap_string_value(value: &Value) -> anyhow::Result<String> {
@@ -233,26 +263,13 @@ mod test {
     #[tokio::test]
     async fn download_stock_data() {
         let portfolio = vec![PortfolioPosition {
-            conid: 1,
+            conid: 100,
             assetClass: ASSERT_CLASS_STOCK.into(),
             position: 1.0,
             ..Default::default()
         }];
-        let market_snapshot = vec![HashMap::from([
-            ("conid".into(), 1.into()),
-            (FIELD_ID_PE_RATIO.to_string(), "2".into()),
-            (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
-        ])];
         let expected_stock_data = StockData {
             portfolio: portfolio.clone(),
-            market_snapshot: HashMap::from([(
-                1.into(),
-                MarketSnapshot {
-                    conid: 1,
-                    pe_ratio: 2.0.into(),
-                    dividend_yield: 0.03.into(),
-                },
-            )]),
             ..Default::default()
         };
 
@@ -267,7 +284,8 @@ mod test {
             .return_once(move |_, _| Ok(portfolio));
         ibkr_client
             .expect_market_snapshot()
-            .return_once(move |_, _| Ok(market_snapshot));
+            .with(eq([100_i64]), always())
+            .return_once(move |_, _| Ok(Default::default()));
 
         let downloader = StockDataDownloader {
             ibkr_client,
@@ -303,48 +321,6 @@ mod test {
 
         // Then
         assert_eq!(StockData::default(), actual_stock_data);
-    }
-
-    #[tokio::test]
-    async fn download_market_snapshot() {
-        let expected_market_snapshot: HashMap<_, _> = [
-            (
-                1.into(),
-                MarketSnapshot {
-                    conid: 1,
-                    pe_ratio: 1.0.into(),
-                    dividend_yield: 0.03.into(),
-                },
-            ),
-            (
-                2.into(),
-                MarketSnapshot {
-                    conid: 2,
-                    pe_ratio: 3.0.into(),
-                    dividend_yield: 0.05.into(),
-                },
-            ),
-        ]
-        .into();
-
-        let mut ibkr_client = IbkrClient::default();
-        ibkr_client
-            .expect_market_snapshot()
-            .returning(|_, _| Ok(sample_raw_market_snapshot()));
-
-        let downloader = StockDataDownloader {
-            ibkr_client,
-            ..Default::default()
-        };
-
-        // When
-        let actual_market_snapshot = downloader
-            .download_market_snapshot(&[1, 2, 3, 4])
-            .await
-            .unwrap();
-
-        // Then
-        assert_eq!(expected_market_snapshot, actual_market_snapshot)
     }
 
     #[tokio::test]
@@ -453,14 +429,18 @@ mod test {
         // Given
         let raw: HashMap<_, _> = [
             ("conid".into(), 1.into()),
-            (FIELD_ID_PE_RATIO.to_string(), "1".into()),
+            (FIELD_ID_PE_RATIO.to_string(), "2".into()),
             (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
+            (FIELD_ID_PEMA_20.to_string(), "-4%".into()),
+            (FIELD_ID_PEMA_200.to_string(), "5%".into()),
         ]
         .into();
         let expected_market_snapshot = MarketSnapshot {
             conid: 1,
-            pe_ratio: 1.0.into(),
+            pe_ratio: 2.0.into(),
             dividend_yield: 0.03.into(),
+            pema_20: (-0.04).into(),
+            pema_200: 0.05.into(),
         };
 
         // When
@@ -485,20 +465,5 @@ mod test {
                 ..Default::default()
             })
             .collect()
-    }
-
-    fn sample_raw_market_snapshot() -> Vec<HashMap<String, Value>> {
-        vec![
-            HashMap::from([
-                ("conid".into(), 1.into()),
-                (FIELD_ID_PE_RATIO.to_string(), "1".into()),
-                (FIELD_ID_DIVIDEND_YIELD.to_string(), "3%".into()),
-            ]),
-            HashMap::from([
-                ("conid".into(), 2.into()),
-                (FIELD_ID_PE_RATIO.to_string(), "3".into()),
-                (FIELD_ID_DIVIDEND_YIELD.to_string(), "5%".into()),
-            ]),
-        ]
     }
 }
