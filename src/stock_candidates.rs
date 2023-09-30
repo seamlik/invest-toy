@@ -10,19 +10,6 @@ pub struct StockCandidates {
 }
 
 impl StockCandidates {
-    pub fn from_config_overrides(overrides: &HashMap<String, HashMap<ScoringFactor, f64>>) -> Self {
-        let map = overrides
-            .iter()
-            .map(|(ticker, factors)| {
-                (
-                    ticker.as_str().into(),
-                    convert_config_factors_for_ranker(factors),
-                )
-            })
-            .collect();
-        Self { map }
-    }
-
     pub fn add_candidate(
         &mut self,
         ticker: Ticker,
@@ -52,13 +39,4 @@ impl<const N: usize> From<[(&'static str, HashMap<ScoringFactor, Notional>); N]>
             .collect();
         Self { map }
     }
-}
-
-fn convert_config_factors_for_ranker(
-    factors: &HashMap<ScoringFactor, f64>,
-) -> HashMap<ScoringFactor, Notional> {
-    factors
-        .iter()
-        .map(|(factor, notional)| (*factor, (*notional).into()))
-        .collect()
 }

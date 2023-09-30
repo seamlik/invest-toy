@@ -1,27 +1,27 @@
-use crate::config::Config;
 use crate::stock_data_downloader::StockData;
 use crate::stock_data_downloader::StockDataDownloader;
 use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 pub struct StockDataCacher {
     downloader: StockDataDownloader,
     cache_path: PathBuf,
 }
 
-impl StockDataCacher {
-    pub fn new(config: Rc<Config>) -> Self {
+impl Default for StockDataCacher {
+    fn default() -> Self {
         let mut cache_path = std::env::temp_dir();
         cache_path.push("ibkr-toy-cache.json");
         Self {
-            downloader: StockDataDownloader::new(config),
+            downloader: StockDataDownloader::default(),
             cache_path,
         }
     }
+}
 
+impl StockDataCacher {
     pub async fn fetch(&self, account_id: &str, force_download: bool) -> anyhow::Result<StockData> {
         if force_download {
             println!("Force download stock data")

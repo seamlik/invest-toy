@@ -1,5 +1,4 @@
 use crate::arithmetic_renderer::ArithmeticRenderer;
-use crate::config::Config;
 use crate::ibkr_client::IbkrClient;
 use crate::invest_advisor::InvestAdvisor;
 use crate::report_renderer::ReportRenderer;
@@ -9,8 +8,6 @@ use crate::stock_ranker::StockRanker;
 use crate::table_printer::TablePrinter;
 use anyhow::Context;
 use clap::Parser;
-use std::path::PathBuf;
-use std::rc::Rc;
 
 pub struct Toy {
     args: Cli,
@@ -24,7 +21,7 @@ pub struct Toy {
 }
 
 impl Toy {
-    pub fn new(args: Cli, config: Rc<Config>) -> Self {
+    pub fn new(args: Cli) -> Self {
         Self {
             args,
             ranker: Default::default(),
@@ -33,8 +30,8 @@ impl Toy {
                 arithmetic_renderer: ArithmeticRenderer,
             },
             ibkr_client: Default::default(),
-            stock_data_cacher: StockDataCacher::new(config.clone()),
-            scoring_factor_extractor: ScoringFactorExtractor::new(config),
+            stock_data_cacher: StockDataCacher::default(),
+            scoring_factor_extractor: ScoringFactorExtractor,
             invest_advisor: InvestAdvisor {
                 arithmetic_renderer: ArithmeticRenderer,
             },
@@ -87,9 +84,6 @@ impl Toy {
 
 #[derive(Parser)]
 pub struct Cli {
-    #[arg(long)]
-    pub config: Option<PathBuf>,
-
     #[arg(long)]
     pub force_download: bool,
 }

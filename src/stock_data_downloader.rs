@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::ibkr_client::PortfolioPosition;
 use anyhow::bail;
 use anyhow::Context;
@@ -11,7 +10,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[mockall_double::double]
 use crate::ibkr_client::IbkrClient;
@@ -30,26 +28,14 @@ const FIELD_ID_SYMBOL: i32 = 55;
 
 #[derive(Default)]
 pub struct StockDataDownloader {
-    config: Rc<Config>,
     ibkr_client: IbkrClient,
     clock: Clock,
 }
 
 impl StockDataDownloader {
-    pub fn new(config: Rc<Config>) -> Self {
-        Self {
-            config,
-            ..Default::default()
-        }
-    }
-
     pub async fn download_stock_data(&self, account_id: &str) -> anyhow::Result<StockData> {
         let portfolio = self.download_portfolio(account_id).await?;
         println!("Found {} stocks", portfolio.len());
-        let portfolio: Vec<_> = portfolio
-            .into_iter()
-            .filter(|position| !self.config.r#override.contains_key(&position.ticker))
-            .collect();
 
         let timestamp = self.clock.now();
         let conids: Vec<_> = portfolio.iter().map(|position| position.conid).collect();
@@ -287,11 +273,7 @@ mod test {
             .with(eq([100_i64]), always())
             .return_once(move |_, _| Ok(Default::default()));
 
-        let downloader = StockDataDownloader {
-            ibkr_client,
-            clock,
-            ..Default::default()
-        };
+        let downloader = StockDataDownloader { ibkr_client, clock };
 
         // When
         let actual_stock_data = downloader.download_stock_data("").await.unwrap();
@@ -310,11 +292,7 @@ mod test {
         let mut ibkr_client = IbkrClient::default();
         ibkr_client.expect_portfolio().returning(|_, _| Ok(vec![]));
 
-        let downloader = StockDataDownloader {
-            ibkr_client,
-            clock,
-            ..Default::default()
-        };
+        let downloader = StockDataDownloader { ibkr_client, clock };
 
         // When
         let actual_stock_data = downloader.download_stock_data("").await.unwrap();

@@ -1,21 +1,13 @@
-use crate::config::Config;
 use crate::stock_candidates::StockCandidates;
 use crate::stock_data_downloader::StockData;
 use crate::stock_ranker::Ticker;
 use serde::Deserialize;
-use std::rc::Rc;
 
-pub struct ScoringFactorExtractor {
-    config: Rc<Config>,
-}
+pub struct ScoringFactorExtractor;
 
 impl ScoringFactorExtractor {
-    pub fn new(config: Rc<Config>) -> Self {
-        Self { config }
-    }
-
     pub fn extract_scoring_factors(&self, stock_data: &StockData) -> StockCandidates {
-        let mut candidates = StockCandidates::from_config_overrides(&self.config.r#override);
+        let mut candidates = StockCandidates::default();
         for position in &stock_data.portfolio {
             let conid = position.conid.into();
             let ticker: Ticker = position.ticker.as_str().into();
