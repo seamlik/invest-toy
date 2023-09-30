@@ -43,10 +43,6 @@ mod test {
                 HashMap::from([(ScoringFactor::PeRatio, Notional::from(1.0))]),
             ),
             (
-                "B",
-                HashMap::from([(ScoringFactor::ShortTermChange, Notional::from(1.0))]),
-            ),
-            (
                 "C",
                 HashMap::from([(ScoringFactor::PeRatio, Notional::from(-1.0))]),
             ),

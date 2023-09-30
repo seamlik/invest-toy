@@ -54,14 +54,6 @@ impl ReportRenderer {
                 || none.clone(),
                 |v| self.arithmetic_renderer.render_percentage(v),
             ),
-            short_term_change: factors.get(&ScoringFactor::ShortTermChange).map_or_else(
-                || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v),
-            ),
-            long_term_change: factors.get(&ScoringFactor::LongTermChange).map_or_else(
-                || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v),
-            ),
         }
     }
 }
@@ -72,8 +64,6 @@ pub struct ReportEntry {
     score: String,
     pe_ratio: String,
     dividend_yield: String,
-    short_term_change: String,
-    long_term_change: String,
 }
 
 #[cfg(test)]

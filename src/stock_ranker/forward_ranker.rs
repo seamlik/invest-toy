@@ -49,39 +49,39 @@ mod test {
         let stock_candidates: StockCandidates = [
             (
                 "A",
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::DividendYield, Notional::from(1.0))]),
             ),
             (
                 "B",
-                HashMap::from([(ScoringFactor::ShortTermChange, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::PeRatio, Notional::from(1.0))]),
             ),
             (
                 "C",
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(-1.0))]),
+                HashMap::from([(ScoringFactor::DividendYield, Notional::from(-1.0))]),
             ),
             (
                 "D",
-                HashMap::from([(ScoringFactor::LongTermChange, Notional::from(0.0))]),
+                HashMap::from([(ScoringFactor::PeRatio, Notional::from(0.0))]),
             ),
         ]
         .into();
         let expected_notional_candidates: HashMap<_, _> = [("A".into(), 1.0.into())].into();
-        let dummy_scores = HashMap::default();
+        let expected_scores = HashMap::default();
         let mut notional_ranker = NotionalRanker::default();
         notional_ranker
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
-            .return_const_st(dummy_scores.clone());
+            .return_const_st(expected_scores.clone());
         let service = ForwardRanker {
             notional_ranker,
-            factor_type: ScoringFactor::LongTermChange,
+            factor_type: ScoringFactor::DividendYield,
         };
 
         // When
         let actual_scores = service.rank(&stock_candidates);
 
         // Then
-        assert_eq!(dummy_scores, actual_scores);
+        assert_eq!(expected_scores, actual_scores);
     }
 
     #[test]
@@ -89,21 +89,21 @@ mod test {
         // Given
         let stock_candidates = StockCandidates::default();
         let expected_notional_candidates = HashMap::default();
-        let dummy_scores = HashMap::default();
+        let expected_scores = HashMap::default();
         let mut notional_ranker = NotionalRanker::default();
         notional_ranker
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
-            .return_const_st(dummy_scores.clone());
+            .return_const_st(expected_scores.clone());
         let service = ForwardRanker {
             notional_ranker,
-            factor_type: ScoringFactor::LongTermChange,
+            factor_type: ScoringFactor::PeRatio,
         };
 
         // When
         let actual_scores = service.rank(&stock_candidates);
 
         // Then
-        assert_eq!(dummy_scores, actual_scores);
+        assert_eq!(expected_scores, actual_scores);
     }
 }

@@ -4,7 +4,6 @@ mod config;
 mod file_writer;
 mod ibkr_client;
 mod invest_advisor;
-mod progress_bar;
 mod report_renderer;
 mod scoring_factor_extractor;
 mod stock_candidates;

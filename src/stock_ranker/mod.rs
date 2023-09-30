@@ -1,11 +1,9 @@
 mod forward_ranker;
 mod notional_ranker;
 mod pe_ratio_ranker;
-mod short_term_change_ranker;
 
 use self::forward_ranker::ForwardRanker;
 use self::pe_ratio_ranker::PeRatioRanker;
-use self::short_term_change_ranker::ShortTermChangeRanker;
 use crate::scoring_factor_extractor::ScoringFactor;
 use crate::stock_candidates::StockCandidates;
 use derive_more::Add;
@@ -23,10 +21,8 @@ impl Default for StockRanker {
     fn default() -> Self {
         Self {
             rankers: vec![
-                Box::new(ForwardRanker::new(ScoringFactor::LongTermChange)),
                 Box::new(ForwardRanker::new(ScoringFactor::DividendYield)),
                 Box::<PeRatioRanker>::default(),
-                Box::<ShortTermChangeRanker>::default(),
             ],
         }
     }

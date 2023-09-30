@@ -53,21 +53,6 @@ impl IbkrClient {
         let data = fetch(&endpoint).await?;
         serde_json::from_str(&data).map_err(Into::into)
     }
-
-    pub async fn market_history(
-        &self,
-        conid: i64,
-        chart_period: &str,
-        chart_bar: &str,
-    ) -> anyhow::Result<Vec<HistoricalMarketDataEntry>> {
-        let endpoint = format!(
-            "iserver/marketdata/history?conid={}&period={}&bar={}&outsideRth=false",
-            conid, chart_period, chart_bar
-        );
-        let data = fetch(&endpoint).await?;
-        let market_history: HistoricalMarketData = serde_json::from_str(data.as_str())?;
-        Ok(market_history.data)
-    }
 }
 
 async fn fetch(endpoint: &str) -> anyhow::Result<String> {
@@ -111,18 +96,4 @@ pub struct PortfolioPosition {
     pub ticker: String,
     pub position: f64,
     pub assetClass: String,
-}
-
-#[derive(Deserialize)]
-pub struct HistoricalMarketData {
-    pub data: Vec<HistoricalMarketDataEntry>,
-}
-
-#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
-pub struct HistoricalMarketDataEntry {
-    /// Price at market close
-    pub c: f64,
-
-    /// Timestamp
-    pub t: i64,
 }
