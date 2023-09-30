@@ -55,7 +55,7 @@ impl Toy {
 
         let stock_data = self
             .stock_data_cacher
-            .fetch(&account_id, self.args.force_download)
+            .fetch(&account_id, self.args.use_cache)
             .await
             .context("Failed to fetch stock data")?;
         let candidates = self
@@ -86,9 +86,9 @@ impl Toy {
 
 #[derive(Parser)]
 pub struct Cli {
-    /// Force-download data from IBKR, refreshing the cache.
+    /// Generates report using cached data
     #[arg(long)]
-    pub force_download: bool,
+    pub use_cache: bool,
 
     /// Number of stocks to invest.
     #[arg(long, default_value = "16")]

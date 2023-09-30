@@ -22,11 +22,12 @@ impl Default for StockDataCacher {
 }
 
 impl StockDataCacher {
-    pub async fn fetch(&self, account_id: &str, force_download: bool) -> anyhow::Result<StockData> {
-        if force_download {
-            println!("Force download stock data")
+    pub async fn fetch(&self, account_id: &str, use_cache: bool) -> anyhow::Result<StockData> {
+        if !use_cache {
+            println!("Downloading stock data")
         } else if let Ok(stock_data) = self.read_cache().await {
             if !cache_outdated(stock_data.timestamp) {
+                println!("Generating report using cached data");
                 return Ok(stock_data);
             } else {
                 println!("Cache is outdated");
