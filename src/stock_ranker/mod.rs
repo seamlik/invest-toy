@@ -1,9 +1,9 @@
-mod forward_ranker;
 mod notional_ranker;
-mod pe_ratio_ranker;
+mod positive_greatest_winning_ranker;
+mod positive_least_winning_ranker;
 
-use self::forward_ranker::ForwardRanker;
-use self::pe_ratio_ranker::PeRatioRanker;
+use self::positive_greatest_winning_ranker::PositiveGreatestWinningRanker;
+use self::positive_least_winning_ranker::PositiveLeastWinningRanker;
 use crate::scoring_factor_extractor::ScoringFactor;
 use crate::stock_candidates::StockCandidates;
 use derive_more::Add;
@@ -21,8 +21,10 @@ impl Default for StockRanker {
     fn default() -> Self {
         Self {
             rankers: vec![
-                Box::new(ForwardRanker::new(ScoringFactor::DividendYield)),
-                Box::<PeRatioRanker>::default(),
+                Box::new(PositiveGreatestWinningRanker::new(
+                    ScoringFactor::DividendYield,
+                )),
+                Box::new(PositiveLeastWinningRanker::new(ScoringFactor::PeRatio)),
             ],
         }
     }
@@ -81,8 +83,6 @@ mod test {
 
     #[test]
     fn sum_scores() {
-        // Given
-
         let score1: HashMap<_, _> = [("A".into(), 0.1.into()), ("B".into(), 0.2.into())].into();
         let mut ranker1 = MockFactorRanker::default();
         ranker1.expect_rank().return_const_st(score1);

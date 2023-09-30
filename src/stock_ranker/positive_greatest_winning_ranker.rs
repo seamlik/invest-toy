@@ -8,12 +8,12 @@ use std::collections::HashMap;
 #[mockall_double::double]
 use super::notional_ranker::NotionalRanker;
 
-pub struct ForwardRanker {
+pub struct PositiveGreatestWinningRanker {
     notional_ranker: NotionalRanker,
     factor_type: ScoringFactor,
 }
 
-impl ForwardRanker {
+impl PositiveGreatestWinningRanker {
     pub fn new(factor_type: ScoringFactor) -> Self {
         Self {
             notional_ranker: Default::default(),
@@ -22,7 +22,7 @@ impl ForwardRanker {
     }
 }
 
-impl FactorRanker for ForwardRanker {
+impl FactorRanker for PositiveGreatestWinningRanker {
     fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
@@ -72,13 +72,13 @@ mod test {
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(expected_scores.clone());
-        let service = ForwardRanker {
+        let ranker = PositiveGreatestWinningRanker {
             notional_ranker,
             factor_type: ScoringFactor::DividendYield,
         };
 
         // When
-        let actual_scores = service.rank(&stock_candidates);
+        let actual_scores = ranker.rank(&stock_candidates);
 
         // Then
         assert_eq!(expected_scores, actual_scores);
@@ -95,13 +95,13 @@ mod test {
             .expect_rank()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(expected_scores.clone());
-        let service = ForwardRanker {
+        let ranker = PositiveGreatestWinningRanker {
             notional_ranker,
             factor_type: ScoringFactor::PeRatio,
         };
 
         // When
-        let actual_scores = service.rank(&stock_candidates);
+        let actual_scores = ranker.rank(&stock_candidates);
 
         // Then
         assert_eq!(expected_scores, actual_scores);

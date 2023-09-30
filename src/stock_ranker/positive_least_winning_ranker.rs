@@ -8,18 +8,27 @@ use std::collections::HashMap;
 #[mockall_double::double]
 use super::notional_ranker::NotionalRanker;
 
-#[derive(Default)]
-pub struct PeRatioRanker {
+pub struct PositiveLeastWinningRanker {
     notional_ranker: NotionalRanker,
+    factor_type: ScoringFactor,
 }
 
-impl FactorRanker for PeRatioRanker {
+impl PositiveLeastWinningRanker {
+    pub fn new(factor_type: ScoringFactor) -> Self {
+        Self {
+            notional_ranker: Default::default(),
+            factor_type,
+        }
+    }
+}
+
+impl FactorRanker for PositiveLeastWinningRanker {
     fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
             .filter_map(|(name, factors)| {
                 factors
-                    .get(&ScoringFactor::PeRatio)
+                    .get(&self.factor_type)
                     .filter(|notional| notional.value > 0.0)
                     .cloned()
                     .map(|notional| (name.clone(), notional))
@@ -43,6 +52,10 @@ mod test {
                 HashMap::from([(ScoringFactor::PeRatio, Notional::from(1.0))]),
             ),
             (
+                "B",
+                HashMap::from([(ScoringFactor::DividendYield, Notional::from(1.0))]),
+            ),
+            (
                 "C",
                 HashMap::from([(ScoringFactor::PeRatio, Notional::from(-1.0))]),
             ),
@@ -59,10 +72,13 @@ mod test {
             .expect_rank_reversed()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = PeRatioRanker { notional_ranker };
+        let ranker = PositiveLeastWinningRanker {
+            notional_ranker,
+            factor_type: ScoringFactor::PeRatio,
+        };
 
         // When
-        let actual_scores = service.rank(&stock_candidates);
+        let actual_scores = ranker.rank(&stock_candidates);
 
         // Then
         assert_eq!(dummy_scores, actual_scores);
@@ -79,10 +95,13 @@ mod test {
             .expect_rank_reversed()
             .withf_st(move |arg| arg == &expected_notional_candidates)
             .return_const_st(dummy_scores.clone());
-        let service = PeRatioRanker { notional_ranker };
+        let ranker = PositiveLeastWinningRanker {
+            notional_ranker,
+            factor_type: ScoringFactor::PeRatio,
+        };
 
         // When
-        let actual_scores = service.rank(&stock_candidates);
+        let actual_scores = ranker.rank(&stock_candidates);
 
         // Then
         assert_eq!(dummy_scores, actual_scores);
