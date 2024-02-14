@@ -32,5 +32,6 @@ jobs:
         env:
           CARGO_TARGET_DIR: target-install
       - run: devops format
-      - run: git --no-pager diff --exit-code
+      - name: Check against unformatted files
+        run: git --no-pager diff --exit-code
       - run: cargo test
