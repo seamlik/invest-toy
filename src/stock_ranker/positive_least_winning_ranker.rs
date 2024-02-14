@@ -36,6 +36,9 @@ impl FactorRanker for PositiveLeastWinningRanker {
             .collect();
         self.notional_ranker.rank_reversed(&notional_candidates)
     }
+    fn get_factor(&self) -> ScoringFactor {
+        self.factor_type
+    }
 }
 
 #[cfg(test)]
