@@ -24,6 +24,9 @@ jobs:
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 21.6.1
       - run: npm install --global prettier
       - run: cargo install --git https://github.com/seamlik/devops.git --force
         env:
