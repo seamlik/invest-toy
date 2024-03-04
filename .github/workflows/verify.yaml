@@ -1,4 +1,3 @@
-name: verify
 on:
   - push
   - pull_request
@@ -6,32 +5,18 @@ jobs:
   main:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        name: Cache Rust
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/git/db
-            ~/.cargo/registry/cache
-            ~/.cargo/registry/index
-            target
-            target-install
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
-      - uses: actions/cache@v3
-        name: Cache NPM
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node
+      # Setup
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 21.6.1
+          node-version: 21
+      - uses: seamlik/devops/.github/actions/cache-nodejs@master
       - run: npm install --global prettier
-      - run: cargo install --git https://github.com/seamlik/devops.git --force
+      - uses: seamlik/devops/.github/actions/install-devops@master
+
+      # Verify
+      - uses: seamlik/devops/.github/actions/upload-codecov@master
         env:
-          CARGO_TARGET_DIR: target-install
-      - run: devops format
-      - name: Check against unformatted files
-        run: git --no-pager diff --exit-code
-      - run: cargo test
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: devops format rust markdown yaml
+      - uses: seamlik/devops/.github/actions/check-formatting@master
