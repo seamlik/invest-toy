@@ -1,22 +1,26 @@
 on:
   - push
   - pull_request
+env:
+  RUSTFLAGS: "--deny warnings"
 jobs:
   main:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       # Setup
       - uses: actions/checkout@v4
+      - uses: seamlik/devops/.github/actions/cache-nodejs@2.0.0
+      - uses: seamlik/devops/.github/actions/cache-rust@2.0.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 21
-      - uses: seamlik/devops/.github/actions/cache-nodejs@master
+          node-version: 23
       - run: npm install --global prettier
-      - uses: seamlik/devops/.github/actions/install-devops@master
 
-      # Verify
-      - uses: seamlik/devops/.github/actions/upload-codecov@master
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - run: devops format rust markdown yaml
-      - uses: seamlik/devops/.github/actions/check-formatting@master
+      # Verify formatting
+      - run: cargo fmt
+      - run: prettier --write **/*.yaml **/*.md
+      - uses: seamlik/devops/.github/actions/check-formatting@2.0.0
+
+      # Verify code
+      - run: cargo clippy --all-targets --all-features
+      - run: cargo test
