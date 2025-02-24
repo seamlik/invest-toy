@@ -1,6 +1,7 @@
 .gradle/
+.idea/
 .vscode/
-/build/
 /Cargo.lock
+/build/
 /target-coverage/
 /target/
