@@ -1,13 +1,13 @@
 use crate::arithmetic_renderer::ArithmeticRenderer;
-use crate::stock_ranker::Notional;
-use crate::stock_ranker::Score;
-use crate::stock_ranker::Ticker;
+use crate::ranker::Score;
+use crate::ranker::Ticker;
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct InvestAdvisor {
-    pub arithmetic_renderer: ArithmeticRenderer,
+    arithmetic_renderer: ArithmeticRenderer,
 }
 
 impl InvestAdvisor {
@@ -15,7 +15,7 @@ impl InvestAdvisor {
         &self,
         scores: &HashMap<Ticker, Score>,
         invest_num: usize,
-    ) -> Vec<InvestAdviceEntry> {
+    ) -> Vec<StockAdvice> {
         let candidates: Vec<_> = scores
             .iter()
             .sorted_unstable_by(|(_, score_a), (_, score_b)| {
@@ -30,20 +30,18 @@ impl InvestAdvisor {
             .collect()
     }
 
-    fn build_entry(&self, ticker: &Ticker, score: &Score, total_score: f64) -> InvestAdviceEntry {
-        let percentage = Notional {
-            value: score.value / total_score,
-        };
-        let percentage = self.arithmetic_renderer.render_percentage(&percentage);
-        InvestAdviceEntry {
+    fn build_entry(&self, ticker: &Ticker, score: &Score, total_score: f64) -> StockAdvice {
+        let ratio = score.value / total_score;
+        let ratio_text = self.arithmetic_renderer.render_percentage(ratio);
+        StockAdvice {
             ticker: ticker.to_string(),
-            percentage,
+            ratio: ratio_text,
         }
     }
 }
 
 #[derive(Serialize)]
-pub struct InvestAdviceEntry {
-    ticker: String,
-    percentage: String,
+pub struct StockAdvice {
+    pub ticker: String,
+    pub ratio: String,
 }

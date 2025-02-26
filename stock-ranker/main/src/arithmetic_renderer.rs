@@ -1,5 +1,4 @@
-use crate::stock_ranker::Notional;
-
+#[derive(Default)]
 pub struct ArithmeticRenderer;
 
 impl ArithmeticRenderer {
@@ -10,8 +9,8 @@ impl ArithmeticRenderer {
             .into()
     }
 
-    pub fn render_percentage(&self, percentage: &Notional) -> String {
-        format!("{}%", self.render_float(percentage.value * 100.0))
+    pub fn render_percentage(&self, percentage: f64) -> String {
+        format!("{}%", self.render_float(percentage * 100.0))
     }
 }
 
@@ -29,9 +28,6 @@ mod test {
 
     #[test]
     fn render_change() {
-        assert_eq!(
-            "28.45%",
-            ArithmeticRenderer.render_percentage(&0.284513.into())
-        );
+        assert_eq!("28.45%", ArithmeticRenderer.render_percentage(0.284513));
     }
 }

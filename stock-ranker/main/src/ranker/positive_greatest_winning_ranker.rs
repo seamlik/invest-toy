@@ -1,8 +1,8 @@
 use super::FactorRanker;
 use super::Score;
-use super::StockCandidates;
+use super::ScoringCandidates;
 use super::Ticker;
-use crate::scoring_factor_extractor::ScoringFactor;
+use crate::scoring_candidate::ScoringFactor;
 use std::collections::HashMap;
 
 #[mockall_double::double]
@@ -23,7 +23,7 @@ impl PositiveGreatestWinningRanker {
 }
 
 impl FactorRanker for PositiveGreatestWinningRanker {
-    fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
+    fn rank(&self, candidates: &ScoringCandidates) -> HashMap<Ticker, Score> {
         let notional_candidates: HashMap<_, _> = candidates
             .iter()
             .filter_map(|(name, factors)| {
@@ -44,19 +44,19 @@ impl FactorRanker for PositiveGreatestWinningRanker {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stock_ranker::Notional;
+    use crate::ranker::Notional;
 
     #[test]
     fn rank_correct_candidates() {
         // Given
-        let stock_candidates: StockCandidates = [
+        let stock_candidates: ScoringCandidates = [
             (
                 "A",
                 HashMap::from([(ScoringFactor::DividendYield, Notional::from(1.0))]),
             ),
             (
                 "B",
-                HashMap::from([(ScoringFactor::PeRatio, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(1.0))]),
             ),
             (
                 "C",
@@ -64,7 +64,7 @@ mod test {
             ),
             (
                 "D",
-                HashMap::from([(ScoringFactor::PeRatio, Notional::from(0.0))]),
+                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(0.0))]),
             ),
         ]
         .into();
@@ -90,7 +90,7 @@ mod test {
     #[test]
     fn rank_no_candidate() {
         // Given
-        let stock_candidates = StockCandidates::default();
+        let stock_candidates = ScoringCandidates::default();
         let expected_notional_candidates = HashMap::default();
         let expected_scores = HashMap::default();
         let mut notional_ranker = NotionalRanker::default();
@@ -100,7 +100,7 @@ mod test {
             .return_const_st(expected_scores.clone());
         let ranker = PositiveGreatestWinningRanker {
             notional_ranker,
-            factor_type: ScoringFactor::PeRatio,
+            factor_type: ScoringFactor::PriceChangeIn1Month,
         };
 
         // When

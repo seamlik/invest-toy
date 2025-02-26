@@ -1,13 +1,11 @@
 mod negative_least_winning_ranker;
 mod notional_ranker;
 mod positive_greatest_winning_ranker;
-mod positive_least_winning_ranker;
 
 use self::negative_least_winning_ranker::NegativeLeastWinningRanker;
 use self::positive_greatest_winning_ranker::PositiveGreatestWinningRanker;
-use self::positive_least_winning_ranker::PositiveLeastWinningRanker;
-use crate::scoring_factor_extractor::ScoringFactor;
-use crate::stock_candidates::StockCandidates;
+use crate::scoring_candidate::ScoringCandidates;
+use crate::scoring_candidate::ScoringFactor;
 use derive_more::Add;
 use derive_more::Display;
 use derive_more::From;
@@ -28,29 +26,24 @@ impl Default for StockRanker {
                 Box::new(PositiveGreatestWinningRanker::new(
                     ScoringFactor::DividendYield,
                 )),
-                Box::new(PositiveLeastWinningRanker::new(ScoringFactor::PeRatio)),
                 Box::new(NegativeLeastWinningRanker::new(
-                    ScoringFactor::PriceEma20Change,
+                    ScoringFactor::PriceChangeIn1Month,
                 )),
                 Box::new(PositiveGreatestWinningRanker::new(
-                    ScoringFactor::PriceEma200Change,
+                    ScoringFactor::PriceChangeIn5Years,
                 )),
             ],
             factor_weight: HashMap::from([
-                // Half of my stocks don't pay dividend, and even they do, it's not a significant
-                // income. Let's not make it too pronounced in to decision making.
                 (ScoringFactor::DividendYield, 1.0),
-                // P/E ratio of some companies (especially PAH3, merely 3!) feel artificial.
-                (ScoringFactor::PeRatio, 0.0),
-                (ScoringFactor::PriceEma20Change, 4.0),
-                (ScoringFactor::PriceEma200Change, 5.0),
+                (ScoringFactor::PriceChangeIn1Month, 4.0),
+                (ScoringFactor::PriceChangeIn5Years, 5.0),
             ]),
         }
     }
 }
 
 impl StockRanker {
-    pub fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score> {
+    pub fn rank(&self, candidates: &ScoringCandidates) -> HashMap<Ticker, Score> {
         self.rankers
             .iter()
             .flat_map(|ranker| self.calculate_weighted_rank(ranker.as_ref(), candidates))
@@ -60,7 +53,7 @@ impl StockRanker {
     fn calculate_weighted_rank(
         &self,
         ranker: &dyn FactorRanker,
-        candidates: &StockCandidates,
+        candidates: &ScoringCandidates,
     ) -> HashMap<Ticker, Score> {
         let weight = self
             .factor_weight
@@ -76,7 +69,7 @@ impl StockRanker {
 
 #[mockall::automock]
 trait FactorRanker {
-    fn rank(&self, candidates: &StockCandidates) -> HashMap<Ticker, Score>;
+    fn rank(&self, candidates: &ScoringCandidates) -> HashMap<Ticker, Score>;
     fn get_factor(&self) -> ScoringFactor;
 }
 
@@ -100,7 +93,7 @@ impl From<String> for Ticker {
     }
 }
 
-#[derive(Clone, Copy, From, PartialEq)]
+#[derive(Clone, Copy, From, PartialEq, Debug)]
 pub struct Notional {
     pub value: f64,
 }
@@ -130,7 +123,7 @@ mod test {
         ranker2.expect_rank().return_const_st(score2);
         ranker2
             .expect_get_factor()
-            .return_const_st(ScoringFactor::PeRatio);
+            .return_const_st(ScoringFactor::PriceChangeIn1Month);
 
         let expected_scores: HashMap<_, _> =
             [("A".into(), 70.0.into()), ("B".into(), 20.0.into())].into();
@@ -138,7 +131,7 @@ mod test {
             rankers: vec![Box::new(ranker1), Box::new(ranker2)],
             factor_weight: HashMap::from([
                 (ScoringFactor::DividendYield, 0.1),
-                (ScoringFactor::PeRatio, 0.2),
+                (ScoringFactor::PriceChangeIn1Month, 0.2),
             ]),
         };
 

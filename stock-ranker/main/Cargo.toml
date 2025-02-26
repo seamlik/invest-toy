@@ -1,0 +1,15 @@
+[package]
+name = "stock_ranker"
+edition.workspace = true
+publish.workspace = true
+version.workspace = true
+
+[dependencies]
+derive_more = { version = "2", features = ["add", "display", "from", "mul"] }
+itertools = "0.14"
+mockall = "0.13"
+mockall_double = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+test-case = "3"

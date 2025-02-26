@@ -1,23 +1,24 @@
 use crate::arithmetic_renderer::ArithmeticRenderer;
-use crate::scoring_factor_extractor::ScoringFactor;
-use crate::stock_candidates::StockCandidates;
-use crate::stock_ranker::Notional;
-use crate::stock_ranker::Score;
-use crate::stock_ranker::Ticker;
+use crate::ranker::Notional;
+use crate::ranker::Score;
+use crate::ranker::Ticker;
+use crate::scoring_candidate::ScoringCandidates;
+use crate::scoring_candidate::ScoringFactor;
 use itertools::Itertools;
 use serde::Serialize;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct ReportRenderer {
-    pub arithmetic_renderer: ArithmeticRenderer,
+    arithmetic_renderer: ArithmeticRenderer,
 }
 
 impl ReportRenderer {
     pub fn render(
         &self,
-        candidates: &StockCandidates,
+        candidates: &ScoringCandidates,
         scores: &HashMap<Ticker, Score>,
-    ) -> Vec<ReportEntry> {
+    ) -> Vec<StockReport> {
         candidates
             .iter()
             .map(|(ticker, factors)| {
@@ -41,39 +42,38 @@ impl ReportRenderer {
         ticker: String,
         factors: &HashMap<ScoringFactor, Notional>,
         score: f64,
-    ) -> ReportEntry {
+    ) -> StockReport {
         let none = "None".to_string();
-        ReportEntry {
+        StockReport {
             ticker,
             score: self.render_score(score),
-            pe_ratio: factors.get(&ScoringFactor::PeRatio).map_or_else(
-                || none.clone(),
-                |notional| self.arithmetic_renderer.render_float(notional.value),
-            ),
             dividend_yield: factors.get(&ScoringFactor::DividendYield).map_or_else(
                 || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v),
+                |v| self.arithmetic_renderer.render_percentage(v.value),
             ),
-            pema_20: factors.get(&ScoringFactor::PriceEma20Change).map_or_else(
-                || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v),
-            ),
-            pema_200: factors.get(&ScoringFactor::PriceEma200Change).map_or_else(
-                || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v),
-            ),
+            price_change_in_1_month: factors
+                .get(&ScoringFactor::PriceChangeIn1Month)
+                .map_or_else(
+                    || none.clone(),
+                    |v| self.arithmetic_renderer.render_percentage(v.value),
+                ),
+            price_change_in_5_years: factors
+                .get(&ScoringFactor::PriceChangeIn5Years)
+                .map_or_else(
+                    || none.clone(),
+                    |v| self.arithmetic_renderer.render_percentage(v.value),
+                ),
         }
     }
 }
 
 #[derive(Serialize, Default, PartialEq, Eq, Debug)]
-pub struct ReportEntry {
-    ticker: String,
-    score: String,
-    pe_ratio: String,
-    dividend_yield: String,
-    pema_20: String,
-    pema_200: String,
+pub struct StockReport {
+    pub ticker: String,
+    pub score: String,
+    pub price_change_in_1_month: String,
+    pub price_change_in_5_years: String,
+    pub dividend_yield: String,
 }
 
 #[cfg(test)]
@@ -86,7 +86,7 @@ mod test {
         let renderer = ReportRenderer {
             arithmetic_renderer: ArithmeticRenderer,
         };
-        let candidates: StockCandidates =
+        let candidates: ScoringCandidates =
             [("A", Default::default()), ("B", Default::default())].into();
         let scores: HashMap<_, _> = [("A".into(), 1.0.into()), ("B".into(), 2.0.into())].into();
         let expected_tickers = vec!["B".to_string(), "A".to_string()];
