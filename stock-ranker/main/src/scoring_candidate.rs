@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
-use crate::StockMetric;
 use crate::ranker::Notional;
 use crate::ranker::Ticker;
+use schema::StockMetric;
+use std::collections::HashMap;
 
 #[derive(Default, Debug)]
 pub struct ScoringCandidates {
@@ -56,14 +55,14 @@ impl ScoringCandidateExtractor {
                     notional.into(),
                 );
             }
-            if let Some(notional) = stock.price_change_in_1_month {
+            if let Some(notional) = stock.price_change_in_one_month {
                 candidates.add_candidate(
                     ticker.clone(),
                     ScoringFactor::PriceChangeIn1Month,
                     notional.into(),
                 );
             }
-            if let Some(notional) = stock.price_change_in_5_years {
+            if let Some(notional) = stock.price_change_in_five_years {
                 candidates.add_candidate(
                     ticker.clone(),
                     ScoringFactor::PriceChangeIn5Years,

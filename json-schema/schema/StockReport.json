@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "StockReport",
+  "type": "object",
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "description": "ID of the stock in stock exchange"
+    },
+    "score": {
+      "type": "string"
+    },
+    "price_change_in_one_month": {
+      "type": "string"
+    },
+    "price_change_in_five_years": {
+      "type": "string"
+    },
+    "dividend_yield": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ticker",
+    "score",
+    "price_change_in_one_month",
+    "price_change_in_five_years",
+    "dividend_yield"
+  ]
+}

@@ -2,7 +2,7 @@ use crate::arithmetic_renderer::ArithmeticRenderer;
 use crate::ranker::Score;
 use crate::ranker::Ticker;
 use itertools::Itertools;
-use serde::Serialize;
+use schema::StockAdvice;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -38,10 +38,4 @@ impl InvestAdvisor {
             ratio: ratio_text,
         }
     }
-}
-
-#[derive(Serialize)]
-pub struct StockAdvice {
-    pub ticker: String,
-    pub ratio: String,
 }

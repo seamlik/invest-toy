@@ -3,5 +3,6 @@
 .vscode/
 /Cargo.lock
 /build/
+/node_modules/
 /target-coverage/
 /target/

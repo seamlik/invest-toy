@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "StockAdvice",
+  "type": "object",
+  "properties": {
+    "ticker": {
+      "type": "string"
+    },
+    "ratio": {
+      "type": "string",
+      "description": "Ratio of cash to invest into this stock."
+    }
+  },
+  "required": ["ticker", "ratio"]
+}

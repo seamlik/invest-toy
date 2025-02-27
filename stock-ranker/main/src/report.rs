@@ -5,7 +5,7 @@ use crate::ranker::Ticker;
 use crate::scoring_candidate::ScoringCandidates;
 use crate::scoring_candidate::ScoringFactor;
 use itertools::Itertools;
-use serde::Serialize;
+use schema::StockReport;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -51,13 +51,13 @@ impl ReportRenderer {
                 || none.clone(),
                 |v| self.arithmetic_renderer.render_percentage(v.value),
             ),
-            price_change_in_1_month: factors
+            price_change_in_one_month: factors
                 .get(&ScoringFactor::PriceChangeIn1Month)
                 .map_or_else(
                     || none.clone(),
                     |v| self.arithmetic_renderer.render_percentage(v.value),
                 ),
-            price_change_in_5_years: factors
+            price_change_in_five_years: factors
                 .get(&ScoringFactor::PriceChangeIn5Years)
                 .map_or_else(
                     || none.clone(),
@@ -65,15 +65,6 @@ impl ReportRenderer {
                 ),
         }
     }
-}
-
-#[derive(Serialize, Default, PartialEq, Eq, Debug)]
-pub struct StockReport {
-    pub ticker: String,
-    pub score: String,
-    pub price_change_in_1_month: String,
-    pub price_change_in_5_years: String,
-    pub dividend_yield: String,
 }
 
 #[cfg(test)]

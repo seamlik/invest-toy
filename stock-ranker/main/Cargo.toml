@@ -9,7 +9,7 @@ derive_more = { version = "2", features = ["add", "display", "from", "mul"] }
 itertools = "0.14"
 mockall = "0.13"
 mockall_double = "0.3"
-serde = { version = "1.0", features = ["derive"] }
+schema = { path = "../../json-schema/rust" }
 
 [dev-dependencies]
 test-case = "3"
