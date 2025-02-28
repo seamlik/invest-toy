@@ -9,21 +9,16 @@ jobs:
     steps:
       # Setup
       - uses: actions/checkout@v4
-      - uses: seamlik/devops/.github/actions/cache-nodejs@2.0.0
-      - uses: seamlik/devops/.github/actions/cache-rust@2.0.0
+      - uses: seamlik/devops/.github/actions/cache-nodejs@2.1.0
+      - uses: seamlik/devops/.github/actions/cache-rust@2.1.0
       - uses: actions/setup-node@v4
         with:
           node-version: 23
       - run: npm install
+      - run: sudo apt-get update
+      - run: sudo apt-get install --yes ninja-build
 
-      # Generate code
-      - run: npx quicktype --src-lang schema --lang rust --visibility public --out json-schema/rust/src/lib.rs json-schema/schema/Output.json json-schema/schema/Input.json
-
-      # Verify formatting
-      - run: cargo fmt
-      - run: npx prettier --write **/*.yaml **/*.md **/*.json
-      - uses: seamlik/devops/.github/actions/check-formatting@2.0.0
-
-      # Verify code
-      - run: cargo clippy --all-targets --all-features
-      - run: cargo test
+      # Verify
+      - run: ninja format
+      - uses: seamlik/devops/.github/actions/check-formatting@2.1.0
+      - run: ninja verify

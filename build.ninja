@@ -1,0 +1,25 @@
+rule quicktype
+  command = pwsh -Command "npx quicktype --src-lang schema --lang rust --visibility public --out $out $in"
+build json-schema/rust/src/lib.rs: quicktype json-schema/schema/Output.json json-schema/schema/Input.json
+
+build rust-sources: phony json-schema/rust/src/lib.rs
+
+rule prettier
+  command = pwsh -Command "npx prettier --write **/*.yaml **/*.md **/*.json"
+build prettier: prettier
+
+rule cargo-fmt
+  command = cargo fmt
+build cargo-fmt: cargo-fmt rust-sources
+
+rule clippy
+  command = cargo clippy --all-targets --all-features
+build clippy: clippy rust-sources
+
+rule cargo-test
+  command = cargo test
+build cargo-test: cargo-test rust-sources
+
+# Main entry points
+build format: phony prettier cargo-fmt
+build verify: phony clippy cargo-test
