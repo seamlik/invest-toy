@@ -1,5 +1,5 @@
 [package]
-name = "stock_ranker"
+name = "stock-ranker"
 edition.workspace = true
 publish.workspace = true
 version.workspace = true
