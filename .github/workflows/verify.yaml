@@ -15,8 +15,11 @@ jobs:
         with:
           node-version: 23
       - run: npm install
+      - run: npm install
+        working-directory: web-extension
       - run: sudo apt-get update
       - run: sudo apt-get install --yes ninja-build
+      - run: cargo install resvg
 
       # Verify
       - run: ninja format

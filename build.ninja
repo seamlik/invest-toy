@@ -1,11 +1,25 @@
 rule quicktype
   command = pwsh -Command "npx quicktype --src-lang schema --lang rust --visibility public --out $out $in"
-build json-schema/rust/src/lib.rs: quicktype json-schema/schema/Output.json json-schema/schema/Input.json
+
+rule resvg
+  command = resvg --width 128 --height 128 $in $out
+
+rule copy
+  command = pwsh -Command "Copy-Item -Path $in -Destination $out"
+
+rule tsc
+  command = pwsh -Command "cd web-extension ; npx tsc"
+build tsc: tsc
 
 build rust-sources: phony json-schema/rust/src/lib.rs
+build json-schema/rust/src/lib.rs: quicktype json-schema/schema/Output.json json-schema/schema/Input.json
+
+build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json
+build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
+build web-extension/build/manifest.json: copy web-extension/src/manifest.json
 
 rule prettier
-  command = pwsh -Command "npx prettier --write **/*.yaml **/*.md **/*.json"
+  command = pwsh -Command "npx prettier --write **/*.yaml **/*.md **/*.json **/*.ts"
 build prettier: prettier
 
 rule cargo-fmt
@@ -26,5 +40,5 @@ build cargo-test: cargo-test rust-sources
 
 # Main entry points
 build format: phony prettier cargo-fmt
-build build: phony wasm-pack
-build verify: phony clippy cargo-test
+build build: phony wasm-pack web-extension
+build verify: phony clippy cargo-test web-extension
