@@ -1,5 +1,5 @@
 rule quicktype
-  command = pwsh -Command "npx quicktype --src-lang schema --lang rust --visibility public --out $out $in"
+  command = pwsh -Command "quicktype --src-lang schema --lang rust --visibility public --out $out $in"
 
 rule resvg
   command = resvg --width 128 --height 128 $in $out
@@ -8,7 +8,7 @@ rule copy
   command = pwsh -Command "Copy-Item -Path $in -Destination $out"
 
 rule tsc
-  command = pwsh -Command "cd web-extension ; npx tsc"
+  command = pwsh -Command "cd web-extension ; tsc"
 build tsc: tsc
 
 build rust-sources: phony json-schema/rust/src/lib.rs
@@ -19,7 +19,7 @@ build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.s
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
 
 rule prettier
-  command = pwsh -Command "npx prettier --write **/*.yaml **/*.md **/*.json **/*.ts"
+  command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts"
 build prettier: prettier
 
 rule cargo-fmt

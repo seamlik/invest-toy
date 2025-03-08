@@ -1,7 +1,0 @@
-{
-  "name": "invest-toy",
-  "devDependencies": {
-    "prettier": "^3",
-    "quicktype": "^23"
-  }
-}

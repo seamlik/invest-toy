@@ -1,5 +1,6 @@
 .gradle/
 .idea/
+.ninja_lock
 .ninja_log
 .vscode/
 /Cargo.lock

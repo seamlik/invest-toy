@@ -1,7 +1,6 @@
 {
   "name": "web-extension",
   "devDependencies": {
-    "chrome-types": "^0.1.343",
-    "typescript": "^5"
+    "chrome-types": "^0.1.343"
   }
 }

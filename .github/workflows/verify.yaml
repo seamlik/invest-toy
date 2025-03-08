@@ -1,33 +1,23 @@
 on:
-  - push
   - pull_request
-env:
-  RUSTFLAGS: "--deny warnings"
+  - push
+  - workflow_dispatch
 jobs:
   main:
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/seamlik/invest-toy-builder:latest
+      env:
+        # GitHub Actions modifies the home directory
+        CARGO_HOME: /root/.cargo
+        RUSTUP_HOME: /root/.rustup
     steps:
       # Setup
       - uses: actions/checkout@v4
-      - uses: seamlik/devops/.github/actions/cache-nodejs@2.1.0
-      - uses: seamlik/devops/.github/actions/cache-rust@2.1.0
-      - name: Install Binaryen
-        run: |
-          wget --output-document=binaryen.tar.gz https://github.com/WebAssembly/binaryen/releases/download/version_122/binaryen-version_122-x86_64-linux.tar.gz
-          mkdir /tmp/binaryen
-          tar --extract --gzip --strip-components=1 --file=binaryen.tar.gz --directory=/tmp/binaryen
-          echo /tmp/binaryen/bin >> "$GITHUB_PATH"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 23
-      - run: npm install
+      - name: "Circumvent that GitHub Actions checks out the repository using another user"
+        run: chown --recursive 0:0 .
       - run: npm install
         working-directory: web-extension
-      - name: Install from APT
-        run: |
-          sudo apt-get update --yes
-          sudo apt-get install --yes ninja-build
-      - run: cargo install resvg wasm-pack
 
       # Verify
       - run: ninja format
