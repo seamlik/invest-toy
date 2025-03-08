@@ -41,4 +41,4 @@ build cargo-test: cargo-test rust-sources
 # Main entry points
 build format: phony prettier cargo-fmt
 build build: phony wasm-pack web-extension
-build verify: phony clippy cargo-test web-extension
+build verify: phony build clippy cargo-test
