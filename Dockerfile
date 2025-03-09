@@ -30,7 +30,7 @@ RUN bash /opt/nodesource-init.sh
 RUN apt-get install --yes nodejs
 
 # Install from NPM
-RUN npm install --global typescript prettier quicktype
+RUN npm install --global eslint prettier quicktype typescript
 
 # Install Binaryen
 ADD https://github.com/WebAssembly/binaryen/releases/download/version_122/binaryen-version_122-x86_64-linux.tar.gz /opt/binaryen.tar.gz
