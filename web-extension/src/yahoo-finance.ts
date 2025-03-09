@@ -1,7 +1,15 @@
+import { StockMetric } from "./json-schema.js";
+import { extractPriceChange } from "./extract-price-change.js";
+
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();
   const urls = await extractStockUrls(tabIdPortfolio);
   console.info(`Found ${urls.length.toString()} stocks`);
+  await chrome.tabs.remove(tabIdPortfolio);
+  const metrics: StockMetric[] = [];
+  for (const url of urls) {
+    metrics.push(await extractStockMetric(url));
+  }
 }
 
 async function visitPortfolio(): Promise<number> {
@@ -52,6 +60,34 @@ function queryAllStockUrls(): string[] {
   return urls;
 }
 
+async function extractStockMetric(url: string): Promise<StockMetric> {
+  const tabId = await navigateTo(url);
+
+  const ticker = await queryInTab(tabId, queryTicker);
+  if (ticker === null) {
+    throw new Error(`Failed to extract ticker from: ${url}`);
+  }
+
+  const priceChangeInOneMonth =
+    (await extractPriceChange(tabId, "1m")) ?? undefined;
+  const priceChangeInFiveYears =
+    (await extractPriceChange(tabId, "5y")) ?? undefined;
+
+  await chrome.tabs.remove(tabId);
+  return {
+    ticker: ticker,
+    price_change_in_one_month: priceChangeInOneMonth,
+    price_change_in_five_years: priceChangeInFiveYears,
+  };
+}
+
+function queryTicker(): string | null {
+  const element = document.querySelector(
+    'section[data-testid="quote-hdr"] div.hdr h1',
+  );
+  return element instanceof HTMLHeadingElement ? element.textContent : null;
+}
+
 async function navigateTo(url: string): Promise<number> {
   const tab = await chrome.tabs.create({
     url: url,
@@ -61,4 +97,12 @@ async function navigateTo(url: string): Promise<number> {
     throw new Error("Tab has no ID");
   }
   return tabId;
+}
+
+export async function queryInTab<T>(tabId: number, query: () => T): Promise<T> {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: query,
+  });
+  return result.result as T;
 }

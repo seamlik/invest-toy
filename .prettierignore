@@ -1,2 +1,3 @@
 /stock-ranker/wasm/pkg/
 /web-extension/build/
+/web-extension/src/json-schema.ts

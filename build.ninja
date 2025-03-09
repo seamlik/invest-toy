@@ -23,6 +23,7 @@ build web-extension/src/json-schema.ts: quicktype-typescript json-schema/schema/
 build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
+build web-extension/build/extract-price-change.js: copy web-extension/src/extract-price-change.js
 
 rule prettier
   command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts" **/*.js
@@ -45,7 +46,7 @@ rule cargo-test
 build cargo-test: cargo-test rust-sources
 
 rule eslint
-  command = pwsh -Command "cd web-extension ; eslint src --ignore-pattern **/json-schema.ts"
+  command = pwsh -Command "cd web-extension ; eslint src/*.ts --ignore-pattern **/json-schema.ts --ignore-pattern **/*.js"
 build eslint: eslint
 
 # Main entry points
