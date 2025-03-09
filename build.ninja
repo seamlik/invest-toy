@@ -1,5 +1,8 @@
-rule quicktype
+rule quicktype-rust
   command = pwsh -Command "quicktype --src-lang schema --lang rust --visibility public --out $out $in"
+
+rule quicktype-typescript
+  command = pwsh -Command "quicktype --src-lang schema --lang typescript --out $out $in"
 
 rule resvg
   command = resvg --width 128 --height 128 $in $out
@@ -12,7 +15,10 @@ rule tsc
 build tsc: tsc
 
 build rust-sources: phony json-schema/rust/src/lib.rs
-build json-schema/rust/src/lib.rs: quicktype json-schema/schema/Output.json json-schema/schema/Input.json
+build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/Input.json
+
+build typescript-sources: phony web-extension/src/json-schema.ts
+build web-extension/src/json-schema.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
 
 build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
@@ -39,7 +45,7 @@ rule cargo-test
 build cargo-test: cargo-test rust-sources
 
 rule eslint
-  command = pwsh -Command "cd web-extension ; eslint src"
+  command = pwsh -Command "cd web-extension ; eslint src --ignore-pattern **/json-schema.ts"
 build eslint: eslint
 
 # Main entry points
