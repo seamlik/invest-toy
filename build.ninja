@@ -36,10 +36,6 @@ rule cargo-fmt
   command = cargo fmt
 build cargo-fmt: cargo-fmt rust-sources
 
-rule wasm-pack
-  command = wasm-pack build --target web stock-ranker/wasm
-build wasm-pack: wasm-pack rust-sources
-
 rule clippy
   command = cargo clippy --all-targets --all-features
 build clippy: clippy rust-sources
@@ -54,5 +50,5 @@ build eslint: eslint
 
 # Main entry points
 build format: phony prettier cargo-fmt
-build build: phony wasm-pack web-extension
 build verify: phony build clippy cargo-test eslint tsc
+build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json
