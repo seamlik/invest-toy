@@ -24,7 +24,6 @@ build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json
 build typescript-sources: phony json-schema/typescript/index.ts
 build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
 
-build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
 
@@ -35,10 +34,6 @@ build prettier: prettier
 rule cargo-fmt
   command = cargo fmt
 build cargo-fmt: cargo-fmt rust-sources
-
-rule wasm-pack
-  command = wasm-pack build --target web stock-ranker/wasm
-build wasm-pack: wasm-pack rust-sources
 
 rule clippy
   command = cargo clippy --all-targets --all-features
@@ -54,5 +49,5 @@ build eslint: eslint
 
 # Main entry points
 build format: phony prettier cargo-fmt
-build build: phony wasm-pack web-extension
-build verify: phony build clippy cargo-test eslint tsc
+build verify: phony clippy cargo-test eslint tsc
+build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json

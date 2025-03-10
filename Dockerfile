@@ -12,7 +12,6 @@ ADD https://sh.rustup.rs /opt/rustup-init.sh
 RUN apt-get install --yes curl
 RUN cat /opt/rustup-init.sh | bash -s -- -y
 ENV PATH="$PATH:/root/.cargo/bin"
-RUN rustup target add wasm32-unknown-unknown
 
 # Install from crates.io
 RUN apt-get install --yes build-essential
@@ -31,11 +30,5 @@ RUN apt-get install --yes nodejs
 
 # Install from NPM
 RUN npm install --global esbuild eslint prettier quicktype typescript
-
-# Install Binaryen
-ADD https://github.com/WebAssembly/binaryen/releases/download/version_122/binaryen-version_122-x86_64-linux.tar.gz /opt/binaryen.tar.gz
-RUN mkdir /opt/binaryen
-RUN tar --extract --gzip --strip-components=1 --file=/opt/binaryen.tar.gz --directory=/opt/binaryen
-ENV PATH="$PATH:/opt/binaryen/bin"
 
 ENV RUSTFLAGS="--deny warnings"
