@@ -3,7 +3,7 @@
 // The `func` parameter below is declared as () => void,
 // which is incompatible with `queryPriceChange`.
 
-import { queryPriceChange } from "./query-price-change.js";
+import { queryPriceChange } from "./query.js";
 
 export async function extractPriceChange(tabId, changePeriod) {
   const [result] = await chrome.scripting.executeScript({

@@ -1,5 +1,5 @@
 import { StockMetric } from "./json-schema.js";
-import { extractPriceChange } from "./extract-price-change.js";
+import { extractPriceChange } from "./metric/price-change/extract.js";
 
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();

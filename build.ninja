@@ -20,10 +20,10 @@ build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json
 build typescript-sources: phony web-extension/src/json-schema.ts
 build web-extension/src/json-schema.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
 
-build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json
+build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json web-extension/build/metric/price-change/extract.js
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
-build web-extension/build/extract-price-change.js: copy web-extension/src/extract-price-change.js
+build web-extension/build/metric/price-change/extract.js: copy web-extension/src/metric/price-change/extract.js
 
 rule prettier
   command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts" **/*.js
