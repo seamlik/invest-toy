@@ -16,6 +16,9 @@ export function queryPriceChange(changeType: string): number | null {
     return null;
   }
 
+  // Here the logic of parsing percentages is repeated.
+  // This is because we cannot call another function.
+  // This is because any function injected into a tab must be self-contained.
   const stripped = changeInPercent
     .replaceAll(",", "")
     .replaceAll("%", "")

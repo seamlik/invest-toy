@@ -12,19 +12,21 @@ rule copy
 
 rule tsc
   command = pwsh -Command "cd web-extension ; tsc"
-build tsc: tsc
+build tsc: tsc typescript-sources
+
+rule esbuild
+  command = pwsh -Command "cd web-extension ; esbuild --bundle --outdir=build --target=es2024 src/service-worker.ts src/query-dividend-yield.ts"
+build esbuild: esbuild typescript-sources
 
 build rust-sources: phony json-schema/rust/src/lib.rs
 build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/Input.json
 
-build typescript-sources: phony web-extension/src/json-schema.ts
-build web-extension/src/json-schema.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
+build typescript-sources: phony json-schema/typescript/index.ts
+build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
 
-build web-extension: phony tsc web-extension/build/icon-128.png web-extension/build/manifest.json web-extension/build/metric/price-change/extract.js web-extension/build/blob/execute.js
+build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
-build web-extension/build/metric/price-change/extract.js: copy web-extension/src/metric/price-change/extract.js
-build web-extension/build/blob/execute.js: copy web-extension/src/blob/execute.js
 
 rule prettier
   command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts" **/*.js
@@ -47,10 +49,10 @@ rule cargo-test
 build cargo-test: cargo-test rust-sources
 
 rule eslint
-  command = pwsh -Command "cd web-extension ; eslint src/*.ts --ignore-pattern **/json-schema.ts --ignore-pattern **/*.js"
+  command = pwsh -Command "cd web-extension ; eslint src/**/*.ts"
 build eslint: eslint
 
 # Main entry points
 build format: phony prettier cargo-fmt
 build build: phony wasm-pack web-extension
-build verify: phony build clippy cargo-test eslint
+build verify: phony build clippy cargo-test eslint tsc

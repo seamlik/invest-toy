@@ -1,6 +1,6 @@
 // See `../price-change/extract.js` for rationale of writing this in JavaScript
 
-import { navigateToBlob } from "./navigate.js";
+import { navigateToBlob } from "./navigate";
 
 export async function navigateToBlobInTab(tabId, blob) {
   await chrome.scripting.executeScript({

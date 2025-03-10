@@ -1,3 +1,5 @@
+import { parsePercentage } from "./number";
+
 queryDividendYield();
 
 function queryDividendYield(): number | null {
@@ -39,9 +41,4 @@ function extractDividendYield(element: Element): number | null {
 function convertForwardDividendYieldToNumber(source: string): number {
   const percentage = source.replaceAll(")", "").split("(")[1].trim();
   return parsePercentage(percentage);
-}
-
-function parsePercentage(source: string): number {
-  const stripped = source.replaceAll(",", "").replaceAll("%", "").trim();
-  return parseFloat(stripped) / 100;
 }

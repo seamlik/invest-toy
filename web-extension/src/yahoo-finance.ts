@@ -1,6 +1,6 @@
-import { StockMetric } from "./json-schema.js";
-import { extractPriceChange } from "./metric/price-change/extract.js";
-import { navigateToBlobInTab } from "./blob/execute.js";
+import { StockMetric } from "../../json-schema/typescript";
+import { extractPriceChange } from "./metric/price-change/extract";
+import { navigateToBlobInTab } from "./blob/execute";
 
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();
@@ -80,7 +80,7 @@ async function extractStockMetric(url: string): Promise<StockMetric> {
     (await extractPriceChange(tabId, "5y")) ?? undefined;
   const dividendYield: number | null = await executeInTab(
     tabId,
-    "./metric/dividend-yield.js",
+    "query-dividend-yield.js",
   );
 
   await chrome.tabs.remove(tabId);

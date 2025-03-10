@@ -4,7 +4,7 @@
     "module": "ES2022",
     "types": ["chrome-types"],
     "moduleResolution": "bundler",
-    "outDir": "build",
+    "noEmit": true,
     "strict": true
   },
   "include": ["src/**/*.ts"]
