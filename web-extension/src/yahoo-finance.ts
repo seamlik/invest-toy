@@ -1,5 +1,6 @@
 import { StockMetric } from "./json-schema.js";
 import { extractPriceChange } from "./metric/price-change/extract.js";
+import { navigateToBlobInTab } from "./blob/execute.js";
 
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();
@@ -7,14 +8,14 @@ export async function generateReport() {
   const urls = await extractStockUrls(tabIdPortfolio);
   console.info(`Found ${urls.length.toString()} stocks`);
 
-  await chrome.tabs.remove(tabIdPortfolio);
-
   const metrics: StockMetric[] = [];
   for (const url of urls) {
     const metric = await extractStockMetric(url);
     console.info(`Extracted: ${JSON.stringify(metric)}`);
     metrics.push(metric);
   }
+
+  await navigateToBlobInTab(tabIdPortfolio, metrics);
 }
 
 async function visitPortfolio(): Promise<number> {
