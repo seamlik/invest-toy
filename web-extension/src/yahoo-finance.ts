@@ -3,12 +3,17 @@ import { extractPriceChange } from "./extract-price-change.js";
 
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();
+
   const urls = await extractStockUrls(tabIdPortfolio);
   console.info(`Found ${urls.length.toString()} stocks`);
+
   await chrome.tabs.remove(tabIdPortfolio);
+
   const metrics: StockMetric[] = [];
   for (const url of urls) {
-    metrics.push(await extractStockMetric(url));
+    const metric = await extractStockMetric(url);
+    console.info(`Extracted: ${JSON.stringify(metric)}`);
+    metrics.push(metric);
   }
 }
 
@@ -72,12 +77,17 @@ async function extractStockMetric(url: string): Promise<StockMetric> {
     (await extractPriceChange(tabId, "1m")) ?? undefined;
   const priceChangeInFiveYears =
     (await extractPriceChange(tabId, "5y")) ?? undefined;
+  const dividendYield: number | null = await executeInTab(
+    tabId,
+    "./metric/dividend-yield.js",
+  );
 
   await chrome.tabs.remove(tabId);
   return {
     ticker: ticker,
     price_change_in_one_month: priceChangeInOneMonth,
     price_change_in_five_years: priceChangeInFiveYears,
+    dividend_yield: dividendYield ?? undefined,
   };
 }
 
@@ -99,10 +109,18 @@ async function navigateTo(url: string): Promise<number> {
   return tabId;
 }
 
-export async function queryInTab<T>(tabId: number, query: () => T): Promise<T> {
+async function queryInTab<T>(tabId: number, query: () => T): Promise<T> {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     func: query,
+  });
+  return result.result as T;
+}
+
+async function executeInTab<T>(tabId: number, script: string): Promise<T> {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    files: [script],
   });
   return result.result as T;
 }
