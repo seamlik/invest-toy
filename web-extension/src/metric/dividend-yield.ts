@@ -30,7 +30,7 @@ function extractDividendYield(element: Element): number | null {
     case "Forward Dividend & Yield":
       return convertForwardDividendYieldToNumber(rawData);
     case "Yield":
-      return parseFloat(rawData.trim()) / 100;
+      return parsePercentage(rawData);
     default:
       return null;
   }
@@ -38,5 +38,10 @@ function extractDividendYield(element: Element): number | null {
 
 function convertForwardDividendYieldToNumber(source: string): number {
   const percentage = source.replaceAll(")", "").split("(")[1].trim();
-  return parseFloat(percentage) / 100;
+  return parsePercentage(percentage);
+}
+
+function parsePercentage(source: string): number {
+  const stripped = source.replaceAll(",", "").replaceAll("%", "").trim();
+  return parseFloat(stripped) / 100;
 }

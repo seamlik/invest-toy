@@ -16,5 +16,9 @@ export function queryPriceChange(changeType: string): number | null {
     return null;
   }
 
-  return parseFloat(changeInPercent) / 100;
+  const stripped = changeInPercent
+    .replaceAll(",", "")
+    .replaceAll("%", "")
+    .trim();
+  return parseFloat(stripped) / 100;
 }
