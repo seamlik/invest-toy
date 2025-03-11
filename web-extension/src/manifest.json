@@ -3,7 +3,7 @@
   "name": "Invest Toy",
   "version": "1.0.0",
   "description": "Various data scraping tasks operating on your favorite finance website",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "downloads", "scripting"],
   "host_permissions": ["https://finance.yahoo.com/*"],
   "icons": {
     "128": "icon-128.png"

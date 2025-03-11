@@ -1,5 +1,5 @@
 import { StockMetric } from "../../json-schema/typescript";
-import { navigateToBlobInTab } from "./blob/execute";
+import { downloadBlobFromTab } from "./blob";
 
 type MessageListener = (
   message: unknown,
@@ -28,7 +28,8 @@ export async function generateReport() {
     });
   }
 
-  await navigateToBlobInTab(tabIdPortfolio, metrics);
+  const metricFileName = `stock-metric-${today()}.json`;
+  await downloadBlobFromTab(metrics, tabIdPortfolio, metricFileName);
 }
 
 async function visitPortfolio(): Promise<number> {
@@ -112,7 +113,7 @@ async function receiveStockMetricFromTab(tabId: number): Promise<StockMetric> {
     setTimeout(() => {
       reject(new Error(`Timeout awaiting stock metric`));
     }, stockMetricMessageTimeoutInMillisesonds);
-    const listener: MessageListener = (message, sender, _) => {
+    const listener: MessageListener = (message, sender) => {
       if (tabId === sender.tab?.id) {
         resolve(message as StockMetric);
       }
@@ -121,4 +122,8 @@ async function receiveStockMetricFromTab(tabId: number): Promise<StockMetric> {
     chrome.runtime.onMessage.addListener(listener);
     stockMetricMessageListeners.push(listener);
   });
+}
+
+function today(): string {
+  return new Date().toISOString().split("T")[0].replaceAll("-", "");
 }

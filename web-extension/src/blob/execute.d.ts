@@ -1,4 +1,4 @@
-export function navigateToBlobInTab(
+export function createJsonBlobUrlInTab(
+  content: unknown,
   tabId: number,
-  blob: unknown,
-): Promise<void>;
+): Promise<string>;
