@@ -47,7 +47,12 @@ rule eslint
   command = pwsh -Command "cd web-extension ; eslint src/**/*.ts"
 build eslint: eslint typescript-sources
 
+rule cargo-install
+  command = cargo install --path stock-ranker
+build cargo-install: cargo-install rust-sources
+
 # Main entry points
 build format: phony prettier cargo-fmt
 build verify: phony clippy cargo-test eslint tsc
 build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json
+build install-cli: phony cargo-install
