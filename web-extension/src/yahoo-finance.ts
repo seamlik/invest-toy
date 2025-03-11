@@ -1,18 +1,31 @@
 import { StockMetric } from "../../json-schema/typescript";
-import { extractPriceChange } from "./metric/price-change/extract";
 import { navigateToBlobInTab } from "./blob/execute";
+
+type MessageListener = (
+  message: unknown,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: () => void,
+) => boolean | undefined;
+
+const stockMetricMessageTimeoutInMillisesonds = 4000;
+const stockMetricMessageListeners: MessageListener[] = [];
 
 export async function generateReport() {
   const tabIdPortfolio = await visitPortfolio();
 
-  const urls = await extractStockUrls(tabIdPortfolio);
+  const urls = await queryInTab(tabIdPortfolio, queryAllStockUrls);
   console.info(`Found ${urls.length.toString()} stocks`);
 
   const metrics: StockMetric[] = [];
-  for (const url of urls) {
-    const metric = await extractStockMetric(url);
-    console.info(`Extracted: ${JSON.stringify(metric)}`);
-    metrics.push(metric);
+  try {
+    for (const url of urls) {
+      const metric = await extractStockMetric(url);
+      metrics.push(metric);
+    }
+  } finally {
+    stockMetricMessageListeners.forEach((listener) => {
+      chrome.runtime.onMessage.removeListener(listener);
+    });
   }
 
   await navigateToBlobInTab(tabIdPortfolio, metrics);
@@ -43,14 +56,6 @@ function queryFirstPortfolioUrl(): string {
   }
 }
 
-async function extractStockUrls(tabId: number): Promise<string[]> {
-  const stockUrlResults = await chrome.scripting.executeScript({
-    target: { tabId: tabId },
-    func: queryAllStockUrls,
-  });
-  return stockUrlResults[0].result as string[];
-}
-
 function queryAllStockUrls(): string[] {
   const elements = document.querySelectorAll(
     "table > tbody > tr > td:first-child a",
@@ -68,35 +73,12 @@ function queryAllStockUrls(): string[] {
 
 async function extractStockMetric(url: string): Promise<StockMetric> {
   const tabId = await navigateTo(url);
-
-  const ticker = await queryInTab(tabId, queryTicker);
-  if (ticker === null) {
-    throw new Error(`Failed to extract ticker from: ${url}`);
-  }
-
-  const priceChangeInOneMonth =
-    (await extractPriceChange(tabId, "1m")) ?? undefined;
-  const priceChangeInFiveYears =
-    (await extractPriceChange(tabId, "5y")) ?? undefined;
-  const dividendYield: number | null = await executeInTab(
-    tabId,
-    "query-dividend-yield.js",
-  );
-
+  const metricPromise = receiveStockMetricFromTab(tabId);
+  console.info(`Extracting stock metric from: ${url}`);
+  await executeInTab(tabId, "extract-stock-metric.js");
+  const metric = await metricPromise;
   await chrome.tabs.remove(tabId);
-  return {
-    ticker: ticker,
-    price_change_in_one_month: priceChangeInOneMonth,
-    price_change_in_five_years: priceChangeInFiveYears,
-    dividend_yield: dividendYield ?? undefined,
-  };
-}
-
-function queryTicker(): string | null {
-  const element = document.querySelector(
-    'section[data-testid="quote-hdr"] div.hdr h1',
-  );
-  return element instanceof HTMLHeadingElement ? element.textContent : null;
+  return metric;
 }
 
 async function navigateTo(url: string): Promise<number> {
@@ -118,10 +100,25 @@ async function queryInTab<T>(tabId: number, query: () => T): Promise<T> {
   return result.result as T;
 }
 
-async function executeInTab<T>(tabId: number, script: string): Promise<T> {
-  const [result] = await chrome.scripting.executeScript({
+async function executeInTab(tabId: number, script: string) {
+  await chrome.scripting.executeScript({
     target: { tabId: tabId },
     files: [script],
   });
-  return result.result as T;
+}
+
+async function receiveStockMetricFromTab(tabId: number): Promise<StockMetric> {
+  return new Promise<StockMetric>((resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Timeout awaiting stock metric`));
+    }, stockMetricMessageTimeoutInMillisesonds);
+    const listener: MessageListener = (message, sender, _) => {
+      if (tabId === sender.tab?.id) {
+        resolve(message as StockMetric);
+      }
+      return true;
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    stockMetricMessageListeners.push(listener);
+  });
 }

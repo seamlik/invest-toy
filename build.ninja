@@ -15,7 +15,7 @@ rule tsc
 build tsc: tsc typescript-sources
 
 rule esbuild
-  command = pwsh -Command "cd web-extension ; esbuild --bundle --outdir=build --target=es2024 src/service-worker.ts src/query-dividend-yield.ts"
+  command = pwsh -Command "cd web-extension ; esbuild --bundle --outdir=build --target=es2024 src/service-worker.ts src/extract-stock-metric.ts"
 build esbuild: esbuild typescript-sources
 
 build rust-sources: phony json-schema/rust/src/lib.rs

@@ -1,13 +1,11 @@
-import { parsePercentage } from "./number";
+import { parsePercentage } from "../number";
 
-queryDividendYield();
-
-function queryDividendYield(): number | null {
+export function extractDividendYield(): number | null {
   const items = document.querySelectorAll(
     'div[data-testid="quote-statistics"] > ul > li',
   );
   for (const element of items) {
-    const dividendYield = extractDividendYield(element);
+    const dividendYield = extractDividendYieldFromDataCell(element);
     if (dividendYield !== null) {
       return dividendYield;
     }
@@ -15,7 +13,7 @@ function queryDividendYield(): number | null {
   return null;
 }
 
-function extractDividendYield(element: Element): number | null {
+function extractDividendYieldFromDataCell(element: Element): number | null {
   const spans = [
     ...element.querySelectorAll(":scope > span"),
   ] as HTMLSpanElement[];

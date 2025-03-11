@@ -1,4 +1,6 @@
-export function queryPriceChange(changeType: string): number | null {
+import { parsePercentage } from "../number";
+
+export function extractPriceChange(changeType: string): number | null {
   const button = document.querySelector(`button#tab-${changeType}`);
   if (!(button instanceof HTMLButtonElement)) {
     return null;
@@ -16,12 +18,5 @@ export function queryPriceChange(changeType: string): number | null {
     return null;
   }
 
-  // Here the logic of parsing percentages is repeated.
-  // This is because we cannot call another function.
-  // This is because any function injected into a tab must be self-contained.
-  const stripped = changeInPercent
-    .replaceAll(",", "")
-    .replaceAll("%", "")
-    .trim();
-  return parseFloat(stripped) / 100;
+  return parsePercentage(changeInPercent);
 }
