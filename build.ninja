@@ -19,10 +19,10 @@ rule esbuild
 build esbuild: esbuild typescript-sources
 
 build rust-sources: phony json-schema/rust/src/lib.rs
-build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/Input.json
+build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/StockMetric.json
 
 build typescript-sources: phony json-schema/typescript/index.ts
-build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/Input.json
+build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/StockMetric.json
 
 build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
 build web-extension/build/manifest.json: copy web-extension/src/manifest.json
@@ -45,7 +45,7 @@ build cargo-test: cargo-test rust-sources
 
 rule eslint
   command = pwsh -Command "cd web-extension ; eslint src/**/*.ts"
-build eslint: eslint
+build eslint: eslint typescript-sources
 
 # Main entry points
 build format: phony prettier cargo-fmt

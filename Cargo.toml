@@ -1,5 +1,5 @@
 [workspace]
-members = ["stock-ranker/main", "json-schema/rust"]
+members = ["stock-ranker", "json-schema/rust"]
 resolver = "2"
 
 [workspace.package]

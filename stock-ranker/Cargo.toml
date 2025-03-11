@@ -5,11 +5,14 @@ publish.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow = "1"
 derive_more = { version = "2", features = ["add", "display", "from", "mul"] }
 itertools = "0.14"
 mockall = "0.13"
 mockall_double = "0.3"
-schema = { path = "../../json-schema/rust" }
+schema = { path = "../json-schema/rust" }
+serde = "1"
+serde_json = "1"
 
 [dev-dependencies]
 test-case = "3"
