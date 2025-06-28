@@ -17,6 +17,7 @@ use std::io::Write;
 use std::io::stdin;
 use std::process::Command;
 use std::process::Stdio;
+use std::str::FromStr;
 
 fn main() -> anyhow::Result<()> {
     let input: Vec<StockMetric> =
@@ -36,7 +37,12 @@ fn rank(metrics: Vec<StockMetric>) -> anyhow::Result<Output> {
         anyhow::bail!("No stock metric in the input")
     }
 
-    let invest_count = metrics.len() / 2;
+    let default_invest_count = metrics.len() / 2;
+    let invest_count = std::env::var("STOCK_RANKER_INVEST_COUNT")
+        .ok()
+        .map(|text| usize::from_str(&text).unwrap_or(default_invest_count))
+        .unwrap_or(default_invest_count);
+
     let candidates = ScoringCandidateExtractor.extract_scoring_candidates(&metrics);
     let scores = StockRanker::default().rank(&candidates);
     let report = ReportRenderer::default().render(&candidates, &scores);

@@ -44,3 +44,9 @@ The CLI program `stock-ranker` is now usable.
 5. Run `cat stock-metrics-XXX.json | stock-ranker`
 
 Now you know which stock to invest at what percentage of your available cash.
+
+## Parameters
+
+This CLI program takes parameters from environment variables:
+
+- STOCK_RANKER_INVEST_COUNT: How many stocks to invest in.
