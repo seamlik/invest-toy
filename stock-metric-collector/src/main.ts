@@ -9,8 +9,6 @@ async function main(): Promise<void> {
   try {
     const context = await browser.newContext({ ...device });
     try {
-      context.setDefaultTimeout(0);
-
       const page = await context.newPage();
       try {
         const metrics = await ishares.scrapEtf("239686", page);
