@@ -9,38 +9,12 @@ export async function scrapStock(
 ): Promise<Map<Metric, number>> {
   await navigate(page, url(ticker));
   return new Map([
-    [Metric.OneMonthPriceChange, await scrapOneMonthPriceChange(page)],
     [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page)],
-  ]);
-}
-
-export async function scrapEtf(
-  ticker: string,
-  page: Page,
-): Promise<Map<Metric, number>> {
-  await navigate(page, url(ticker));
-  return new Map([
-    [Metric.OneMonthPriceChange, await scrapOneMonthPriceChange(page)],
   ]);
 }
 
 function url(ticker: string): string {
   return `https://finance.yahoo.com/quote/${ticker}`;
-}
-
-async function scrapOneMonthPriceChange(page: Page): Promise<number> {
-  console.info('Trying to click button "1M"');
-  const oneMonthPriceChangeButton = page.locator("button#tab-1m");
-  await oneMonthPriceChangeButton.click();
-
-  const oneMonthPriceChangeText = await oneMonthPriceChangeButton
-    .locator("div.tooltip h3")
-    .textContent();
-  if (oneMonthPriceChangeText === null) {
-    throw new Error("Price change not found");
-  }
-
-  return parsePercentage(oneMonthPriceChangeText);
 }
 
 async function scrapLongTermTotalReturn(page: Page): Promise<number> {
