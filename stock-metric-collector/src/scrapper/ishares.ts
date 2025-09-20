@@ -5,16 +5,13 @@ import { sleep } from "../time.ts";
 
 export async function scrapEtf(
   id: string,
+  region: Region,
   page: Page,
 ): Promise<Map<Metric, number>> {
-  await navigate(page, url(id));
+  await navigate(page, region.productUrl(id));
   return new Map([
     [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page)],
   ]);
-}
-
-function url(id: string): string {
-  return `https://ishares.com/us/products/${id}/`;
 }
 
 async function scrapLongTermTotalReturn(page: Page): Promise<number> {
@@ -39,3 +36,19 @@ async function scrapLongTermTotalReturn(page: Page): Promise<number> {
 async function waitForPerformanceTableToReload(): Promise<void> {
   await sleep(1000);
 }
+
+export interface Region {
+  productUrl(id: string): string;
+}
+
+export const UnitedStatesRegion: Region = {
+  productUrl(id: string): string {
+    return `https://ishares.com/us/products/${id}/`;
+  },
+};
+
+export const JapanRegion: Region = {
+  productUrl(id: string): string {
+    return `https://blackrock.com/jp/individual-en/en/products/${id}/`;
+  },
+};
