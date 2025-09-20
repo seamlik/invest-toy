@@ -1,4 +1,4 @@
-import * as yahoo_finance from "./scrapper/yahoo-finance.ts";
+import * as ishares from "./scrapper/ishares.ts";
 import * as playwright from "playwright";
 
 const device = playwright.devices["Desktop Chrome"];
@@ -10,7 +10,7 @@ try {
 
     const page = await context.newPage();
     try {
-      const metrics = await yahoo_finance.scrapStock("PYPL", page);
+      const metrics = await ishares.scrapEtf("239686", page);
       console.info(metrics);
     } finally {
       await page.close();
