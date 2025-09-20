@@ -1,4 +1,4 @@
-import * as scrapper from "./scrapper/ishares.ts";
+import * as scrapper from "./scrapper/market-stack.ts";
 import * as playwright from "playwright";
 
 const device = playwright.devices["Desktop Chrome"];
@@ -12,10 +12,14 @@ async function main(): Promise<void> {
       const page = await context.newPage();
       try {
         console.info(
-          await scrapper.scrapEtf("279438", scrapper.JapanRegion, page),
-        );
-        console.info(
-          await scrapper.scrapEtf("239686", scrapper.UnitedStatesRegion, page),
+          await scrapper.scrapProducts([
+            "NVDA",
+            "1475.T",
+            "2330.TW",
+            "ASML.AS",
+            "KOFOL.PR",
+            "WISE.L",
+          ]),
         );
       } finally {
         await page.close();

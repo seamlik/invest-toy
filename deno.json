@@ -1,5 +1,6 @@
 {
   "imports": {
     "playwright": "npm:playwright@^1"
-  }
+  },
+  "unstable": ["temporal"]
 }

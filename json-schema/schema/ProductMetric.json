@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ProductMetric",
+  "type": "object",
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "description": "ID of the financial product in stock exchange"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "one_month_price_change": {
+      "type": "number",
+      "description": "Price change since 1 month ago. Value of 1 means no change."
+    },
+    "long_term_total_return": {
+      "type": "number",
+      "description": "Total return since 5 years ago. Value of 1 means no return."
+    }
+  },
+  "required": [
+    "ticker",
+    "name",
+    "one_month_price_change",
+    "long_term_total_return"
+  ]
+}
