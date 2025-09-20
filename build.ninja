@@ -4,28 +4,22 @@ rule quicktype-rust
 rule quicktype-typescript
   command = pwsh -Command "quicktype --src-lang schema --lang typescript --out $out $in"
 
-rule resvg
-  command = resvg --width 128 --height 128 $in $out
+rule deno-compile
+  command = deno compile --allow-all --output $out $in
 
-rule copy
-  command = pwsh -Command "Copy-Item -Path $in -Destination $out"
+rule deno-lint
+  command = deno lint
+build deno-lint: deno-lint
 
-rule tsc
-  command = pwsh -Command "cd web-extension ; tsc"
-build tsc: tsc typescript-sources
-
-rule esbuild
-  command = pwsh -Command "cd web-extension ; esbuild --bundle --outdir=build --target=es2024 src/service-worker.ts src/extract-stock-metric.ts"
-build esbuild: esbuild typescript-sources
+rule deno-check
+  command = deno check
+build deno-check: deno-check
 
 build rust-sources: phony json-schema/rust/src/lib.rs
 build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/StockMetric.json
 
 build typescript-sources: phony json-schema/typescript/index.ts
 build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/StockMetric.json
-
-build web-extension/build/icon-128.png: resvg web-extension/src/google-finance.svg
-build web-extension/build/manifest.json: copy web-extension/src/manifest.json
 
 rule prettier
   command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts" **/*.js
@@ -43,16 +37,13 @@ rule cargo-test
   command = cargo test
 build cargo-test: cargo-test rust-sources
 
-rule eslint
-  command = pwsh -Command "cd web-extension ; eslint src/**/*.ts"
-build eslint: eslint typescript-sources
-
 rule cargo-install
   command = cargo install --path stock-ranker
 build cargo-install: cargo-install rust-sources
 
+build ./stock-metric-collector/build/stock-metric-collector: deno-compile stock-metric-collector/src/main.ts
+
 # Main entry points
 build format: phony prettier cargo-fmt
-build verify: phony clippy cargo-test eslint tsc
-build web-extension: phony esbuild web-extension/build/icon-128.png web-extension/build/manifest.json
-build install-cli: phony cargo-install
+build verify: phony clippy cargo-test deno-check deno-lint
+build install: phony cargo-install ./stock-metric-collector/build/stock-metric-collector
