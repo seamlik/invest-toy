@@ -11,13 +11,19 @@ export async function scrapProducts(
   const date1MonthAgo = Temporal.Now.plainDateISO().subtract({ days: 30 });
   const tickersJoined = tickers.join(",");
   const url = `https://api.marketstack.com/v2/eod/${date1MonthAgo}?access_key=${apiKey}&symbols=${tickersJoined}`;
+  console.info(`Fetching ${url}`);
   const response = (await (await fetch(url)).json()) as MarketStackResponse;
   return response.data.map((product) => {
-    return { name: product.name, price1MonthAgo: product.close };
+    return {
+      ticker: product.symbol,
+      name: product.name,
+      price1MonthAgo: product.close,
+    };
   });
 }
 
 export interface ProductMetric {
+  ticker: string;
   name: string;
   price1MonthAgo: number;
 }
@@ -29,4 +35,5 @@ interface MarketStackResponse {
 interface MarketStackProduct {
   close: number;
   name: string;
+  symbol: string;
 }

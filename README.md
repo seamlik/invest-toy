@@ -50,4 +50,5 @@ Now you know which stock to invest at what percentage of your available cash.
 This CLI program takes parameters from environment variables:
 
 - PLAYWRIGHT_BROWSER: The [browser channel](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-channel) used to scrap stock metrics.
+- STOCK_METRIC_COLLECTOR_OUTPUT_DIRECTORY: Where to cache the scrapped result.
 - STOCK_RANKER_INVEST_COUNT: How many stocks to invest in.
