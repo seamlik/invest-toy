@@ -16,6 +16,7 @@ For build dependencies, consult [Dockerfile](./Dockerfile).
 To build and install the programs, run:
 
 ```shell
+ninja init
 ninja install
 ```
 

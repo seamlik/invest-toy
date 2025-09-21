@@ -44,6 +44,7 @@ build cargo-install: cargo-install rust-sources
 build ./stock-metric-collector/build/stock-metric-collector: deno-compile stock-metric-collector/src/main.ts
 
 # Main entry points
+build init: phony rust-sources typescript-sources
 build format: phony prettier cargo-fmt
 build verify: phony clippy cargo-test deno-check deno-lint
-build install: phony cargo-install typescript-sources ./stock-metric-collector/build/stock-metric-collector
+build install: phony cargo-install deno-compile
