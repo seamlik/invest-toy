@@ -80,5 +80,5 @@ async function determineSign(performanceDiv: Locator): Promise<number> {
 
 async function scrapLatestPrice(page: Page): Promise<number> {
   const priceText = await page.getByTestId("qsp-price").innerText();
-  return parseFloat(priceText);
+  return parseFloat(priceText.replaceAll(",", "").trim());
 }
