@@ -1,4 +1,3 @@
-import { Metric } from "../metric.ts";
 import { Locator, Page } from "playwright";
 import { parsePercentage } from "../number.ts";
 import { ManagedBrowserPage } from "../playwright.ts";
@@ -6,11 +5,31 @@ import { ManagedBrowserPage } from "../playwright.ts";
 export async function scrapStock(
   ticker: string,
   page: ManagedBrowserPage,
-): Promise<Map<Metric, number>> {
+): Promise<StockMetric> {
   await page.goto(url(ticker));
-  return new Map([
-    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page.page)],
-  ]);
+  return {
+    longTermTotalReturn: await scrapLongTermTotalReturn(page.page),
+    latestPrice: await scrapLatestPrice(page.page),
+  };
+}
+
+export interface StockMetric {
+  longTermTotalReturn: number;
+  latestPrice: number;
+}
+
+export async function scrapEtf(
+  ticker: string,
+  page: ManagedBrowserPage,
+): Promise<EtfMetric> {
+  await page.goto(url(ticker));
+  return {
+    latestPrice: await scrapLatestPrice(page.page),
+  };
+}
+
+export interface EtfMetric {
+  latestPrice: number;
 }
 
 function url(ticker: string): string {
@@ -57,4 +76,9 @@ async function determineSign(performanceDiv: Locator): Promise<number> {
   } else {
     throw new Error("The sign of the long-term return is ambiguous");
   }
+}
+
+async function scrapLatestPrice(page: Page): Promise<number> {
+  const priceText = await page.getByTestId("qsp-price").innerText();
+  return parseFloat(priceText);
 }
