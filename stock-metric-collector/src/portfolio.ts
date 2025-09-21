@@ -1,40 +1,24 @@
 import * as csv from "@std/csv";
 import { Region } from "./scrapper/ishares.ts";
+import { Etf, Product, Stock } from "./collector.ts";
 
 export function load(csvText: string): Product[] {
   const csvValues = csv.parse(csvText, {
-    columns: ["ticker", "type", "isharedId", "isharesRegion"],
+    columns: ["ticker", "type", "isharesId", "isharesRegion"],
     skipFirstRow: true,
   });
   return csvValues.map((row) => {
-    return {
-      ticker: row.ticker,
-      type: parseProductType(row.type),
-      isharesId: row.isharedId,
-      isharesRegion: Region.parse(row.isharesRegion.trim()),
-    };
+    switch (row.type) {
+      case "Stock":
+        return new Stock(row.ticker);
+      case "Exchange-Traded Fund":
+        return new Etf(
+          row.ticker,
+          row.isharesId,
+          Region.parse(row.isharesRegion.trim()),
+        );
+      default:
+        throw new Error(`Unknown product type ${row.type}`);
+    }
   });
-}
-
-export interface Product {
-  ticker: string;
-  type: ProductType;
-  isharesId: string;
-  isharesRegion?: Region;
-}
-
-export enum ProductType {
-  Stock = "Stock",
-  Etf = "Exchange-Traded Fund",
-}
-
-function parseProductType(source: string): ProductType {
-  switch (source) {
-    case ProductType.Stock:
-      return ProductType.Stock;
-    case ProductType.Etf:
-      return ProductType.Etf;
-    default:
-      throw new Error(`Unknown product type ${source}`);
-  }
 }

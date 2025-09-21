@@ -64,13 +64,9 @@ export abstract class Region {
     [JapanRegion.code, JapanRegion],
   ]);
 
-  static parse(code: string): Region | undefined {
-    if (code.length === 0) {
-      return undefined;
-    }
-
+  static parse(code: string): Region {
     const region = this.codeMap.get(code);
-    assertExists(region, `Unknown region ${code}`);
+    assertExists(region, `Unknown region: ${code}`);
     return region;
   }
 }

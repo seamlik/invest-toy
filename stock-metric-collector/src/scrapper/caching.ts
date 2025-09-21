@@ -5,7 +5,7 @@ import * as ishares from "./ishares.ts";
 import { resolve } from "@std/path";
 
 const today = Temporal.Now.plainDateISO();
-const outputDirectoryPath = getOutputDirectoryPath();
+export const outputDirectoryPath = getOutputDirectoryPath();
 
 function getOutputDirectoryPath(): string {
   const value = Deno.env.get("STOCK_METRIC_COLLECTOR_OUTPUT_DIRECTORY");
@@ -20,7 +20,7 @@ abstract class CachingScrapper<T> {
   async run(): Promise<T> {
     const metricsCached = await this.loadMetrics<T>(this.metricsFilePath);
     if (metricsCached !== undefined) {
-      console.info(`Found cached result at ${this.metricsFilePath}`)
+      console.info(`Found cached result at ${this.metricsFilePath}`);
       return metricsCached;
     }
 
