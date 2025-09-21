@@ -1,17 +1,17 @@
 import { Metric } from "../metric.ts";
 import { Page } from "playwright";
-import { navigate } from "../playwright.ts";
+import { ManagedBrowserPage } from "../playwright.ts";
 import { sleep } from "../time.ts";
 import { assertExists } from "@std/assert";
 
 export async function scrapEtf(
   id: string,
   region: Region,
-  page: Page,
+  page: ManagedBrowserPage,
 ): Promise<Map<Metric, number>> {
-  await navigate(page, region.productUrl(id));
+  await page.goto(region.productUrl(id));
   return new Map([
-    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page)],
+    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page.page)],
   ]);
 }
 

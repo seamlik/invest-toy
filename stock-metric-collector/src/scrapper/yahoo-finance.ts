@@ -1,15 +1,15 @@
 import { Metric } from "../metric.ts";
 import { Locator, Page } from "playwright";
 import { parsePercentage } from "../number.ts";
-import { navigate } from "../playwright.ts";
+import { ManagedBrowserPage } from "../playwright.ts";
 
 export async function scrapStock(
   ticker: string,
-  page: Page,
+  page: ManagedBrowserPage,
 ): Promise<Map<Metric, number>> {
-  await navigate(page, url(ticker));
+  await page.goto(url(ticker));
   return new Map([
-    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page)],
+    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page.page)],
   ]);
 }
 
