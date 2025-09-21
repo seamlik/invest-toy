@@ -52,19 +52,19 @@ mod test {
         let stock_candidates: ScoringCandidates = [
             (
                 "A",
-                HashMap::from([(ScoringFactor::DividendYield, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::LongTermTotalReturn, Notional::from(1.0))]),
             ),
             (
                 "B",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(1.0))]),
             ),
             (
                 "C",
-                HashMap::from([(ScoringFactor::DividendYield, Notional::from(-1.0))]),
+                HashMap::from([(ScoringFactor::LongTermTotalReturn, Notional::from(-1.0))]),
             ),
             (
                 "D",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(0.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(0.0))]),
             ),
         ]
         .into();
@@ -77,7 +77,7 @@ mod test {
             .return_const_st(expected_scores.clone());
         let ranker = PositiveGreatestWinningRanker {
             notional_ranker,
-            factor_type: ScoringFactor::DividendYield,
+            factor_type: ScoringFactor::LongTermTotalReturn,
         };
 
         // When
@@ -100,7 +100,7 @@ mod test {
             .return_const_st(expected_scores.clone());
         let ranker = PositiveGreatestWinningRanker {
             notional_ranker,
-            factor_type: ScoringFactor::PriceChangeIn1Month,
+            factor_type: ScoringFactor::OneMonthPriceChange,
         };
 
         // When

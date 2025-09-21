@@ -16,10 +16,10 @@ rule deno-check
 build deno-check: deno-check typescript-sources
 
 build rust-sources: phony json-schema/rust/src/lib.rs
-build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/StockMetric.json
+build json-schema/rust/src/lib.rs: quicktype-rust json-schema/schema/Output.json json-schema/schema/ProductMetric.json
 
 build typescript-sources: phony json-schema/typescript/index.ts
-build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/StockMetric.json json-schema/schema/ProductMetric.json
+build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/ProductMetric.json
 
 rule prettier
   command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts"
@@ -42,6 +42,7 @@ rule cargo-install
 build cargo-install: cargo-install rust-sources
 
 build ./stock-metric-collector/build/stock-metric-collector: deno-compile stock-metric-collector/src/main.ts
+build deno-compile: phony ./stock-metric-collector/build/stock-metric-collector
 
 # Main entry points
 build init: phony rust-sources typescript-sources

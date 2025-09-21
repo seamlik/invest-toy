@@ -23,20 +23,16 @@ impl Default for StockRanker {
     fn default() -> Self {
         Self {
             rankers: vec![
-                Box::new(PositiveGreatestWinningRanker::new(
-                    ScoringFactor::DividendYield,
-                )),
                 Box::new(NegativeLeastWinningRanker::new(
-                    ScoringFactor::PriceChangeIn1Month,
+                    ScoringFactor::OneMonthPriceChange,
                 )),
                 Box::new(PositiveGreatestWinningRanker::new(
-                    ScoringFactor::PriceChangeIn5Years,
+                    ScoringFactor::LongTermTotalReturn,
                 )),
             ],
             factor_weight: HashMap::from([
-                (ScoringFactor::DividendYield, 1.0),
-                (ScoringFactor::PriceChangeIn1Month, 4.0),
-                (ScoringFactor::PriceChangeIn5Years, 5.0),
+                (ScoringFactor::OneMonthPriceChange, 6.0),
+                (ScoringFactor::LongTermTotalReturn, 4.0),
             ]),
         }
     }
@@ -116,22 +112,22 @@ mod test {
         ranker1.expect_rank().return_const_st(score1);
         ranker1
             .expect_get_factor()
-            .return_const_st(ScoringFactor::DividendYield);
+            .return_const_st(ScoringFactor::LongTermTotalReturn);
 
         let score2: HashMap<_, _> = [("A".into(), 300.0.into())].into();
         let mut ranker2 = MockFactorRanker::default();
         ranker2.expect_rank().return_const_st(score2);
         ranker2
             .expect_get_factor()
-            .return_const_st(ScoringFactor::PriceChangeIn1Month);
+            .return_const_st(ScoringFactor::OneMonthPriceChange);
 
         let expected_scores: HashMap<_, _> =
             [("A".into(), 70.0.into()), ("B".into(), 20.0.into())].into();
         let service = StockRanker {
             rankers: vec![Box::new(ranker1), Box::new(ranker2)],
             factor_weight: HashMap::from([
-                (ScoringFactor::DividendYield, 0.1),
-                (ScoringFactor::PriceChangeIn1Month, 0.2),
+                (ScoringFactor::LongTermTotalReturn, 0.1),
+                (ScoringFactor::OneMonthPriceChange, 0.2),
             ]),
         };
 

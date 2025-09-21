@@ -11,7 +11,7 @@ use crate::scoring_candidate::ScoringCandidateExtractor;
 use anyhow::Context;
 use anyhow::anyhow;
 use schema::Output;
-use schema::StockMetric;
+use schema::ProductMetric;
 use serde::Serialize;
 use std::io::Write;
 use std::io::stdin;
@@ -20,7 +20,7 @@ use std::process::Stdio;
 use std::str::FromStr;
 
 fn main() -> anyhow::Result<()> {
-    let input: Vec<StockMetric> =
+    let input: Vec<ProductMetric> =
         serde_json::from_reader(stdin()).context("Failed to deserialize the input as JSON")?;
     let output = rank(input)?;
 
@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn rank(metrics: Vec<StockMetric>) -> anyhow::Result<Output> {
+fn rank(metrics: Vec<ProductMetric>) -> anyhow::Result<Output> {
     if metrics.is_empty() {
         anyhow::bail!("No stock metric in the input")
     }

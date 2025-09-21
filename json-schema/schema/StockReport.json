@@ -10,21 +10,17 @@
     "score": {
       "type": "string"
     },
-    "price_change_in_one_month": {
+    "one_month_price_change": {
       "type": "string"
     },
-    "price_change_in_five_years": {
-      "type": "string"
-    },
-    "dividend_yield": {
+    "long_term_total_return": {
       "type": "string"
     }
   },
   "required": [
     "ticker",
     "score",
-    "price_change_in_one_month",
-    "price_change_in_five_years",
-    "dividend_yield"
+    "one_month_price_change",
+    "long_term_total_return"
   ]
 }

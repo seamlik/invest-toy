@@ -51,19 +51,19 @@ mod test {
         let stock_candidates: ScoringCandidates = [
             (
                 "A",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(-1.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(-1.0))]),
             ),
             (
                 "B",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(-2.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(-2.0))]),
             ),
             (
                 "C",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(1.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(1.0))]),
             ),
             (
                 "D",
-                HashMap::from([(ScoringFactor::PriceChangeIn1Month, Notional::from(0.0))]),
+                HashMap::from([(ScoringFactor::OneMonthPriceChange, Notional::from(0.0))]),
             ),
         ]
         .into();
@@ -76,7 +76,7 @@ mod test {
             .return_const_st(HashMap::default());
         let ranker = NegativeLeastWinningRanker {
             notional_ranker,
-            factor_type: ScoringFactor::PriceChangeIn1Month,
+            factor_type: ScoringFactor::OneMonthPriceChange,
         };
 
         // Then
@@ -96,7 +96,7 @@ mod test {
             .return_const_st(expected_scores.clone());
         let ranker = NegativeLeastWinningRanker {
             notional_ranker,
-            factor_type: ScoringFactor::PriceChangeIn1Month,
+            factor_type: ScoringFactor::OneMonthPriceChange,
         };
 
         // When

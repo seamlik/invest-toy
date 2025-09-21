@@ -47,18 +47,14 @@ impl ReportRenderer {
         StockReport {
             ticker,
             score: self.render_score(score),
-            dividend_yield: factors.get(&ScoringFactor::DividendYield).map_or_else(
-                || none.clone(),
-                |v| self.arithmetic_renderer.render_percentage(v.value),
-            ),
-            price_change_in_one_month: factors
-                .get(&ScoringFactor::PriceChangeIn1Month)
+            one_month_price_change: factors
+                .get(&ScoringFactor::OneMonthPriceChange)
                 .map_or_else(
                     || none.clone(),
                     |v| self.arithmetic_renderer.render_percentage(v.value),
                 ),
-            price_change_in_five_years: factors
-                .get(&ScoringFactor::PriceChangeIn5Years)
+            long_term_total_return: factors
+                .get(&ScoringFactor::LongTermTotalReturn)
                 .map_or_else(
                     || none.clone(),
                     |v| self.arithmetic_renderer.render_percentage(v.value),

@@ -1,6 +1,6 @@
 use crate::ranker::Notional;
 use crate::ranker::Ticker;
-use schema::StockMetric;
+use schema::ProductMetric;
 use std::collections::HashMap;
 
 #[derive(Default, Debug)]
@@ -43,32 +43,21 @@ impl<const N: usize> From<[(&'static str, HashMap<ScoringFactor, Notional>); N]>
 pub struct ScoringCandidateExtractor;
 
 impl ScoringCandidateExtractor {
-    pub fn extract_scoring_candidates(&self, metrics: &[StockMetric]) -> ScoringCandidates {
+    pub fn extract_scoring_candidates(&self, metrics: &[ProductMetric]) -> ScoringCandidates {
         let mut candidates = ScoringCandidates::default();
         for stock in metrics {
             let ticker: Ticker = stock.ticker.as_str().into();
 
-            if let Some(notional) = stock.dividend_yield {
-                candidates.add_candidate(
-                    ticker.clone(),
-                    ScoringFactor::DividendYield,
-                    notional.into(),
-                );
-            }
-            if let Some(notional) = stock.price_change_in_one_month {
-                candidates.add_candidate(
-                    ticker.clone(),
-                    ScoringFactor::PriceChangeIn1Month,
-                    notional.into(),
-                );
-            }
-            if let Some(notional) = stock.price_change_in_five_years {
-                candidates.add_candidate(
-                    ticker.clone(),
-                    ScoringFactor::PriceChangeIn5Years,
-                    notional.into(),
-                );
-            }
+            candidates.add_candidate(
+                ticker.clone(),
+                ScoringFactor::OneMonthPriceChange,
+                stock.one_month_price_change.into(),
+            );
+            candidates.add_candidate(
+                ticker.clone(),
+                ScoringFactor::LongTermTotalReturn,
+                stock.long_term_total_return.into(),
+            );
         }
         candidates
     }
@@ -76,7 +65,6 @@ impl ScoringCandidateExtractor {
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ScoringFactor {
-    DividendYield,
-    PriceChangeIn1Month,
-    PriceChangeIn5Years,
+    OneMonthPriceChange,
+    LongTermTotalReturn,
 }
