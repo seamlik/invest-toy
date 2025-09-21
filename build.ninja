@@ -22,7 +22,7 @@ build typescript-sources: phony json-schema/typescript/index.ts
 build json-schema/typescript/index.ts: quicktype-typescript json-schema/schema/Output.json json-schema/schema/StockMetric.json json-schema/schema/ProductMetric.json
 
 rule prettier
-  command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts" **/*.js
+  command = pwsh -Command "prettier --write **/*.yaml **/*.md **/*.json **/*.ts"
 build prettier: prettier
 
 rule cargo-fmt

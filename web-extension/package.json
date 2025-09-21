@@ -1,9 +1,0 @@
-{
-  "name": "web-extension",
-  "type": "module",
-  "devDependencies": {
-    "@eslint/js": "^9.22.0",
-    "chrome-types": "^0.1.343",
-    "typescript-eslint": "^8.26.0"
-  }
-}
