@@ -2,6 +2,7 @@ import { Metric } from "../metric.ts";
 import { Page } from "playwright";
 import { navigate } from "../playwright.ts";
 import { sleep } from "../time.ts";
+import { assertExists } from "@std/assert";
 
 export async function scrapEtf(
   id: string,
@@ -37,18 +38,36 @@ async function waitForPerformanceTableToReload(): Promise<void> {
   await sleep(1000);
 }
 
-export interface Region {
-  productUrl(id: string): string;
-}
-
 export const UnitedStatesRegion: Region = {
+  code: "United States",
   productUrl(id: string): string {
     return `https://ishares.com/us/products/${id}/`;
   },
 };
 
 export const JapanRegion: Region = {
+  code: "日本",
   productUrl(id: string): string {
     return `https://blackrock.com/jp/individual-en/en/products/${id}/`;
   },
 };
+
+export abstract class Region {
+  abstract productUrl(id: string): string;
+  abstract code: string;
+
+  private static codeMap = new Map([
+    [UnitedStatesRegion.code, UnitedStatesRegion],
+    [JapanRegion.code, JapanRegion],
+  ]);
+
+  static parse(code: string): Region | undefined {
+    if (code.length === 0) {
+      return undefined;
+    }
+
+    const region = this.codeMap.get(code);
+    assertExists(region, `Unknown region ${code}`);
+    return region;
+  }
+}
