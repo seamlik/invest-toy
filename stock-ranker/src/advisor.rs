@@ -14,6 +14,7 @@ impl InvestAdvisor {
     pub fn render_advice(
         &self,
         scores: &HashMap<Ticker, Score>,
+        skip_count: usize,
         invest_num: usize,
     ) -> Vec<StockAdvice> {
         let candidates: Vec<_> = scores
@@ -21,6 +22,7 @@ impl InvestAdvisor {
             .sorted_unstable_by(|(_, score_a), (_, score_b)| {
                 score_b.value.total_cmp(&score_a.value)
             })
+            .skip(skip_count)
             .take(invest_num)
             .collect();
         let total_score = candidates.iter().map(|(_, score)| score.value).sum();

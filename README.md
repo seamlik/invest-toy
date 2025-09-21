@@ -56,6 +56,7 @@ Now you know which stocks to invest at what percentage of your available cash.
 The CLI programs take these parameters from environment variables:
 
 - MARKET_STACK_API_KEY: API key from [MarketStack](https://marketstack.com)
-- PLAYWRIGHT_BROWSER: The [browser channel](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-channel) used to scrap stock metrics.
-- STOCK_METRIC_COLLECTOR_OUTPUT_DIRECTORY: Where to cache the scrapped result.
-- STOCK_RANKER_INVEST_COUNT: How many stocks to invest in.
+- PLAYWRIGHT_BROWSER: The [browser channel](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-channel) used to scrap stock metrics
+- STOCK_METRIC_COLLECTOR_OUTPUT_DIRECTORY: Where to cache the scrapped result
+- STOCK_RANKER_INVEST_COUNT: How many stocks to invest in
+- STOCK_RANKER_SKIP_COUNT: How many stocks to skip from the top scores

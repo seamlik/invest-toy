@@ -37,6 +37,12 @@ fn rank(metrics: Vec<ProductMetric>) -> anyhow::Result<Output> {
         anyhow::bail!("No stock metric in the input")
     }
 
+    let default_skip_count = 0;
+    let skip_count = std::env::var("STOCK_RANKER_SKIP_COUNT")
+        .ok()
+        .map(|text| usize::from_str(&text).unwrap_or(default_skip_count))
+        .unwrap_or(default_skip_count);
+
     let default_invest_count = metrics.len() / 2;
     let invest_count = std::env::var("STOCK_RANKER_INVEST_COUNT")
         .ok()
@@ -46,7 +52,7 @@ fn rank(metrics: Vec<ProductMetric>) -> anyhow::Result<Output> {
     let candidates = ScoringCandidateExtractor.extract_scoring_candidates(&metrics);
     let scores = StockRanker::default().rank(&candidates);
     let report = ReportRenderer::default().render(&candidates, &scores);
-    let advice = InvestAdvisor::default().render_advice(&scores, invest_count);
+    let advice = InvestAdvisor::default().render_advice(&scores, skip_count, invest_count);
     Ok(Output { report, advice })
 }
 
