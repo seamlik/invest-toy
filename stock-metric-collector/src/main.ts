@@ -7,8 +7,8 @@ import { outputDirectoryPath } from "./scrapper/caching.ts";
 async function main() {
   const portfolio = await loadPortfolioFromStdIn();
   const metrics = await collectProductMetrics(portfolio);
-  const outputFilePath = resolve(outputDirectoryPath, "metrics.json")
-  await Deno.writeTextFile(outputFilePath, JSON.stringify(metrics))
+  const outputFilePath = resolve(outputDirectoryPath, "metrics.json");
+  await Deno.writeTextFile(outputFilePath, JSON.stringify(metrics));
 }
 
 async function loadPortfolioFromStdIn(): Promise<Product[]> {

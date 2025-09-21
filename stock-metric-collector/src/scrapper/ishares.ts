@@ -1,7 +1,7 @@
 import { Page } from "playwright";
 import { ManagedBrowserPage } from "../playwright.ts";
-import { sleep } from "../time.ts";
 import { assertExists } from "@std/assert";
+import { delay } from "@std/async";
 
 export async function scrapEtf(
   id: string,
@@ -38,7 +38,7 @@ async function scrapLongTermTotalReturn(page: Page): Promise<number> {
 }
 
 async function waitForPerformanceTableToReload(): Promise<void> {
-  await sleep(1000);
+  await delay(1000);
 }
 
 export const UnitedStatesRegion: Region = {
