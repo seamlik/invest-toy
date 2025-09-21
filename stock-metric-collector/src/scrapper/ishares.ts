@@ -1,4 +1,3 @@
-import { Metric } from "../metric.ts";
 import { Page } from "playwright";
 import { ManagedBrowserPage } from "../playwright.ts";
 import { sleep } from "../time.ts";
@@ -8,11 +7,15 @@ export async function scrapEtf(
   id: string,
   region: Region,
   page: ManagedBrowserPage,
-): Promise<Map<Metric, number>> {
+): Promise<EtfMetric> {
   await page.goto(region.productUrl(id));
-  return new Map([
-    [Metric.LongTermTotalReturn, await scrapLongTermTotalReturn(page.page)],
-  ]);
+  return {
+    longTermTotalReturn: await scrapLongTermTotalReturn(page.page),
+  };
+}
+
+export interface EtfMetric {
+  longTermTotalReturn: number;
 }
 
 async function scrapLongTermTotalReturn(page: Page): Promise<number> {
