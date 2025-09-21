@@ -9,6 +9,7 @@ async function main() {
   const metrics = await collectProductMetrics(portfolio);
   const outputFilePath = resolve(outputDirectoryPath, "metrics.json");
   await Deno.writeTextFile(outputFilePath, JSON.stringify(metrics));
+  console.info(`Metrics successfully wrote to ${outputFilePath}`);
 }
 
 async function loadPortfolioFromStdIn(): Promise<Product[]> {

@@ -5,50 +5,56 @@ It also generates a table that help me decide which stocks to invest in once I g
 
 This project consists of 2 parts:
 
-- A web browser extension (tested on [Microsoft Edge](https://microsoft.com/edge))
-  that extracts stock metrics from [Yahoo Finance](https://finance.yahoo.com)
-- A CLI program that consumes the stock metrics and generates investment advice.
+- stock-metric-collector: A CLI program that extracts stock metrics from various sources
+- stock-ranker: A CLI program that consumes the stock metrics and generates investment advice
 
 ## Build Instructions
 
 The main entry point is [Ninja](https://ninja-build.org).
 For build dependencies, consult [Dockerfile](./Dockerfile).
 
-### Web Extension
-
-Run:
+To build and install the programs, run:
 
 ```shell
-ninja web-extension
+ninja install
 ```
 
-The output is stored at directory `web-extension/build/`.
-Now, follow the [instructions](https://learn.microsoft.com/microsoft-edge/extensions-chromium/getting-started/extension-sideloading) to sideload the extension into your browser.
-
-### CLI Program
-
-Run:
-
-```shell
-ninja install-cli
-```
-
-The CLI program `stock-ranker` is now usable.
+While `stock-ranker` is installed automatically by [Cargo](https://doc.rust-lang.org/stable/cargo),
+`stock-metric-collector` is built at `./stock-metric-collector/build/` and must be installed manually.
 
 ## Usage
 
-1. Create a Yahoo account
-2. Add the stocks you like to a portfolio
-3. Click on the "Invest Toy" extension button
-4. Wait for it to finish and download the stock metrics as a JSON file
-5. Run `cat stock-metrics-XXX.json | stock-ranker`
+First, maintain a CSV containing your portfolio, named `portfolio.csv`, in the following format:
 
-Now you know which stock to invest at what percentage of your available cash.
+| Ticker | Type                                | iShares ID              | iShares Region              |
+| ------ | ----------------------------------- | ----------------------- | --------------------------- |
+|        | ("Stock" or "Exchange-Traded Fund") | (From product page URL) | ("United States" or "日本") |
+| TSLA   | Stock                               |                         |                             |
+| IVV    | Exchange-Traded Fund                | 239726                  | United States               |
+
+Then, grab an API key from MarketStack and set it as an environment variable.
+
+Then, run:
+
+```shell
+cat portfolio.csv | stock-metric-collector
+```
+
+This might need to run multiple times since Playwright is unpredictable.
+
+Finally, run:
+
+```shell
+cat metrics.json | stock-ranker
+```
+
+Now you know which stocks to invest at what percentage of your available cash.
 
 ## Parameters
 
-This CLI program takes parameters from environment variables:
+The CLI programs take these parameters from environment variables:
 
+- MARKET_STACK_API_KEY: API key from [MarketStack](https://marketstack.com)
 - PLAYWRIGHT_BROWSER: The [browser channel](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-channel) used to scrap stock metrics.
 - STOCK_METRIC_COLLECTOR_OUTPUT_DIRECTORY: Where to cache the scrapped result.
 - STOCK_RANKER_INVEST_COUNT: How many stocks to invest in.
